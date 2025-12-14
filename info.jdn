@@ -1,0 +1,35 @@
+{:name "blueshift"
+ :version "DEVEL"
+ :description "Archive Bluesky posts to a GitHub repository"
+ :author "Michael Camilleri"
+ :license "MIT"
+ :url "https://github.com/pyrmont/blueshift"
+ :repo "git+https://github.com/pyrmont/blueshift"
+ :dependencies []
+ :vendored [{:name "argy-bargy"
+             :url "https://github.com/pyrmont/argy-bargy"
+             :prefix "deps/argy-bargy"
+             :paths ["argy-bargy.janet"
+                     "LICENSE"]}
+            {:name "churlish"
+             :url "https://github.com/pyrmont/churlish"
+             :prefix "deps/churlish"
+             :paths ["lib"
+                     "init.janet"
+                     "LICENSE"]}
+            {:name "medea"
+             :url "https://github.com/pyrmont/medea"
+             :prefix "deps/medea"
+             :paths ["lib"
+                     "init.janet"
+                     "LICENSE"]}
+            {:name "testament"
+             :url "https://github.com/pyrmont/testament"
+             :prefix "deps/testament"
+             :paths ["lib/testament.janet"
+                     "init.janet"
+                     "LICENSE"]}]
+ :artifacts {:executables [{:name "blues"
+                            :quickbin? true
+                            :entry "lib/cli.janet"}]
+             :manpages ["man/man1/blues.1"]}}

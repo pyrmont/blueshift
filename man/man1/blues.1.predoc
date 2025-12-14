@@ -1,0 +1,145 @@
+---
+Title: BLUES(1)
+Authors: Michael Camilleri <mike@inqk.net>
+Date: 2025/12/15
+Project: Blueshift
+Version: DEVEL
+---
+
+NAME
+====
+
+**blues** - archive Bluesky posts to GitHub
+
+SYNOPSIS
+========
+
+**blues** [**-c** _file_ | **--config** _file_] [**-i** _string_ |
+         **--ignore** _string_]... [**-l** _limit_ | **--limit** _limit_]
+         [**-q** | **--quiet**]
+
+DESCRIPTION
+===========
+
+**blues** is a command-line utility for archiving Bluesky posts to a GitHub
+repository as Markdown files. It fetches posts from Bluesky, converts them to
+Markdown format with YAML frontmatter, and uploads them to a specified GitHub
+repository.
+
+The tool filters out reposts, replies, quote posts, and posts that begin with
+``@``. Posts can also be filtered using the **--ignore** option.
+
+Options
+-------
+
+- **-c** _file_ | **--config** _file_:
+  A path to the configuration file. This defaults to ``config.jdn`` in the
+  current working directory. For more information about the configuration file,
+  see CONFIGURATION below.
+
+- **-i** _string_ | **--ignore** _string_:
+  Filter out posts that contain the specified string. This option can be
+  specified multiple times to filter multiple strings.
+
+- **-l** _limit_ | **--limit** _limit_:
+  Limit the number of posts to fetch from Bluesky.
+
+- **-q** | **--quiet**:
+  Silence output. By default, **blues** displays progress information about
+  authentication, fetching, filtering, and uploading.
+
+CONFIGURATION
+=============
+
+**blues** requires a configuration file in JDN (Janet Data Notation) format.
+The configuration file must contain the following keys:
+
+- **:bluesky**: A struct containing Bluesky credentials
+  - **:handle**: Your Bluesky handle
+  - **:password**: Your Bluesky app password (not your main password)
+
+- **:github**: A struct containing GitHub repository information
+  - **:owner**: Your GitHub username
+  - **:token**: A GitHub Personal Access Token with repository write access
+  - **:repo**: The name of the repository to upload posts to
+  - **:posts-dir**: The directory in the repository where posts should be saved
+
+Example configuration file:
+
+````
+{:bluesky {:handle "user.bsky.social"
+           :password "your-app-password"}
+ :github {:owner "username"
+          :token "ghp_yourtoken"
+          :repo "blog"
+          :posts-dir "src/_posts"}}
+````
+
+To obtain a Bluesky app password:
+
+1. log in to Bluesky
+2. go to Settings > Privacy and Security > App Passwords
+3. create a new app password
+4. copy the generated password to your configuration file
+
+To obtain a GitHub Personal Access Token:
+
+1. log in to GitHub
+2. go to Settings > Developer settings > Personal access tokens > Tokens (classic)
+3. click "Generate new token (classic)"
+4. select the ``repo`` scope
+5. generate the token and copy it to your configuration file
+
+The configuration file may also contain an optional **:last-fetch** key, which
+is automatically updated by **blues** to track the timestamp of the most recent
+post that was uploaded. This prevents duplicate uploads on subsequent runs.
+
+EXIT STATUS
+===========
+
+**blues** exits ``0`` if exiting without error. Otherwise the exit status will
+be ``1``.
+
+FILES
+=====
+
+*config.jdn*
+  Default configuration file location in the current working directory.
+
+EXAMPLES
+========
+
+Archive all new posts using the default configuration file:
+
+````
+$ blues
+````
+
+Archive posts using a custom configuration file:
+
+````
+$ blues --config ~/.blues/config.jdn
+````
+
+Archive posts but filter out any containing "draft" or "WIP":
+
+````
+$ blues --ignore draft --ignore WIP
+````
+
+Archive only the 10 most recent posts:
+
+````
+$ blues --limit 10
+````
+
+Archive posts silently without progress output:
+
+````
+$ blues --quiet
+````
+
+BUGS
+====
+
+Report issues at <https://github.com/pyrmont/blueshift>.

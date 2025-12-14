@@ -1,0 +1,14 @@
+# Janet build artifacts
+_build/
+
+# Configuration and state files
+config.jdn
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+.vscode/

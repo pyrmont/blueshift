@@ -15,8 +15,8 @@ SYNOPSIS
 ========
 
 **blues** [**-c** _file_ | **--config** _file_] [**-i** _string_ |
-         **--ignore** _string_]... [**-l** _limit_ | **--limit** _limit_]
-         [**-q** | **--quiet**]
+          **--ignore** _string_] [**-l** _limit_ | **--limit** _limit_]
+          [**-q** | **--quiet**]
 
 DESCRIPTION
 ===========
@@ -26,7 +26,7 @@ repository as Markdown files. It fetches posts from Bluesky, converts them to
 Markdown format with YAML frontmatter, and uploads them to a specified GitHub
 repository.
 
-The tool filters out reposts, replies, quote posts, and posts that begin with
+The tool filters out reposts, replies, quote posts and posts that begin with
 ``@``. Posts can also be filtered using the **--ignore** option.
 
 Options
@@ -46,33 +46,21 @@ Options
 
 - **-q** | **--quiet**:
   Silence output. By default, **blues** displays progress information about
-  authentication, fetching, filtering, and uploading.
+  authentication, fetching, filtering and uploading.
 
 CONFIGURATION
 =============
 
 **blues** requires a configuration file in JDN (Janet Data Notation) format.
-The configuration file must contain the following keys:
-
-- **:bluesky**: A struct containing Bluesky credentials
-  - **:handle**: Your Bluesky handle
-  - **:password**: Your Bluesky app password (not your main password)
-
-- **:github**: A struct containing GitHub repository information
-  - **:owner**: Your GitHub username
-  - **:token**: A GitHub Personal Access Token with repository write access
-  - **:repo**: The name of the repository to upload posts to
-  - **:posts-dir**: The directory in the repository where posts should be saved
-
-Example configuration file:
+An example configuration file looks like this:
 
 ````
-{:bluesky {:handle "user.bsky.social"
-           :password "your-app-password"}
- :github {:owner "username"
-          :token "ghp_yourtoken"
-          :repo "blog"
-          :posts-dir "src/_posts"}}
+{:bluesky {:handle "pyrmont.inqk.net"
+           :password "trustno1"}
+ :github {:owner "pyrmont"
+          :token "ghp_iwant2believe"
+          :repo "updates.inqk.net"
+          :posts-dir "src/_posts/2025"}}
 ````
 
 To obtain a Bluesky app password:
@@ -85,12 +73,14 @@ To obtain a Bluesky app password:
 To obtain a GitHub Personal Access Token:
 
 1. log in to GitHub
-2. go to Settings > Developer settings > Personal access tokens > Tokens (classic)
-3. click "Generate new token (classic)"
-4. select the ``repo`` scope
-5. generate the token and copy it to your configuration file
+2. go to Settings > Developer settings > Personal access tokens > Fine-grained tokens
+3. click 'Generate new token'
+4. select 'Only select repositories'
+5. choose the repository
+6. click 'Add permissions'
+7. select 'Contents' (make sure write permission is selected)
 
-The configuration file may also contain an optional **:last-fetch** key, which
+The configuration file may also contain an optional __:last-fetch__ key, which
 is automatically updated by **blues** to track the timestamp of the most recent
 post that was uploaded. This prevents duplicate uploads on subsequent runs.
 
@@ -103,7 +93,7 @@ be ``1``.
 FILES
 =====
 
-*config.jdn*
+- `./config.jdn`:
   Default configuration file location in the current working directory.
 
 EXAMPLES
@@ -121,10 +111,10 @@ Archive posts using a custom configuration file:
 $ blues --config ~/.blues/config.jdn
 ````
 
-Archive posts but filter out any containing "draft" or "WIP":
+Archive posts but filter out any containing ``#nofilter``:
 
 ````
-$ blues --ignore draft --ignore WIP
+$ blues --ignore "#nofilter"
 ````
 
 Archive only the 10 most recent posts:

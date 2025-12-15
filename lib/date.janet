@@ -68,7 +68,6 @@
                     :hours (scan-number (parsed :hours))
                     :minutes (scan-number (parsed :minutes))
                     :seconds (scan-number (parsed :seconds))})
-  # os/mktime without 'local' parameter interprets date as UTC
   (- (os/mktime date-struct) (parsed :tz-offset-seconds)))
 
 (defn as-quasi-rfc2822

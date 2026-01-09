@@ -76,7 +76,7 @@
     (if last-fetch
       (each item feed
         (def created-at (get-in item ["post" "record" "createdAt"]))
-        (def created-epoch (date/as-epoch created-at))
+        (def created-epoch (date/iso8601->epoch created-at))
         (if (and (< (length items) limit)
                  (> created-epoch last-fetch))
           (array/push items item)

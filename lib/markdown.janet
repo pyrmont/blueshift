@@ -36,7 +36,7 @@
   [data]
   (string
     "---" nl
-    "date: " (date/as-quasi-rfc2822 (data :created)) nl
+    "date: " (date/iso8601->rfc2822ish (data :created)) nl
     "source: " (data :uri) nl
     "---" nl))
 

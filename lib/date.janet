@@ -1,81 +1,131 @@
+(defn- min-digits
+  "Creates a string that is at least the minimum number of digits"
+  [min-len n]
+  (def s (string n))
+  (string (string/repeat "0" (max 0 (- min-len (length s)))) s))
+
+(defn- offset-str->secs
+  "Converts an offset string to seconds"
+  [offset-str]
+  (when (nil? offset-str)
+    (break))
+  (when ({"Z" true "+0000" "-0000"} offset-str)
+    (break 0))
+  (def sign (if (string/has-prefix? "+" offset-str) 1 -1))
+  (def hrs (scan-number (string/slice offset-str 1 3)))
+  (def mins (scan-number (string/slice offset-str 3 5)))
+  (* sign (+ (* 3600 hrs) (* 60 mins))))
+
+(defn- parse-rfc2822ish
+  "Parses RFC 2822ish timestamp into components"
+  [rfc-string]
+  (def res (peg/match ~{:main (* :date (? :time) -1)
+                        :date (* :year "-" :month "-" :day)
+                        :year (* (constant :year) (number (4 :d)))
+                        :month (* (constant :month) (number (2 :d)))
+                        :day (* (constant :day) (number (2 :d)))
+                        :time (* (? " ") :hrs ":" :mins (? (* ":" :secs)) (? :offset))
+                        :hrs (* (constant :hours) (number (between 1 2 :d)))
+                        :mins (* (constant :minutes) (number (2 :d)))
+                        :secs (* (constant :seconds) (number (2 :d)))
+                        :offset (* (constant :offset) (? " ") '(* (+ "+" "-") (4 :d)))}
+                      rfc-string))
+  (assertf (not (nil? res)) "invalid date %s" rfc-string)
+  (def t (table ;res))
+  (merge t {:offset-secs (offset-str->secs (t :offset))}))
+
 (defn- parse-iso8601
-  "Parse ISO 8601 timestamp into components"
+  "Parses ISO 8601 timestamp into components"
   [iso-string]
-  (def parts (string/split "T" iso-string))
-  (def date-part (parts 0))
-  (def time-part (parts 1))
-  (def date-bits (string/split "-" date-part))
-  (def year (scan-number (date-bits 0)))
-  (def month (scan-number (date-bits 1)))
-  (def day (scan-number (date-bits 2)))
-  (def time-bits (string/split ":" time-part))
-  (def hours (time-bits 0))
-  (def minutes (time-bits 1))
-  (def seconds-raw (time-bits 2))
-  (def seconds-no-ms (if (def pos (string/find "." seconds-raw))
-                       (string/slice seconds-raw 0 pos)
-                       seconds-raw))
-  (def seconds
-    (cond
-      (string/find "Z" seconds-no-ms)
-      (string/slice seconds-no-ms 0 (string/find "Z" seconds-no-ms))
-      (string/find "+" seconds-no-ms)
-      (string/slice seconds-no-ms 0 (string/find "+" seconds-no-ms))
-      (and (string/find "-" seconds-no-ms) (> (length seconds-no-ms) 2))
-      (string/slice seconds-no-ms 0 (string/find "-" seconds-no-ms))
-      # default
-      seconds-no-ms))
-  (def tz-offset-str
-    (cond
-      (string/find "Z" time-part)
-      "+0000"
-      (string/find "+" time-part)
-      (do
-        (def offset-raw (last (string/split "+" time-part)))
-        (string "+" (string/replace-all ":" "" offset-raw)))
-      (string/find "-" time-part)
-      (do
-        (def offset-raw (last (string/split "-" time-part)))
-        (string "-" (string/replace-all ":" "" offset-raw)))
-      # default
-      "+0000"))
-  (def tz-offset-seconds
-    (if (= tz-offset-str "+0000")
-      0
-      (do
-        (def sign (if (string/has-prefix? "+" tz-offset-str) 1 -1))
-        (def offset-num (string/slice tz-offset-str 1))
-        (def offset-hours (scan-number (string/slice offset-num 0 2)))
-        (def offset-mins (scan-number (string/slice offset-num 2 4)))
-        (* sign (+ (* 3600 offset-hours) (* 60 offset-mins))))))
-  {:date-part date-part
-   :year year
-   :month month
-   :day day
-   :hours hours
-   :minutes minutes
-   :seconds seconds
-   :tz-offset-str tz-offset-str
-   :tz-offset-seconds tz-offset-seconds})
+  (def res (peg/match ~{:main (* :date (? :time) -1)
+                        :date (* :year "-" :month "-" :day)
+                        :year (* (constant :year) (number (4 :d)))
+                        :month (* (constant :month) (number (2 :d)))
+                        :day (* (constant :day) (number (2 :d)))
+                        :time (* "T" :hrs ":" :mins (? (* ":" :secs (? (* "." :ms)))) (? :offset))
+                        :hrs (* (constant :hours) (number (between 1 2 :d)))
+                        :mins (* (constant :minutes) (number (2 :d)))
+                        :secs (* (constant :seconds) (number (2 :d)))
+                        :ms :d+
+                        :offset (* (constant :offset) (+ (* (constant "+0000") "Z")
+                                                         (% (* '(+ "+" "-") '(2 :d) (? ":") '(2 :d)))))}
+                      iso-string))
+  (assertf (not (nil? res)) "invalid date %s" iso-string)
+  (def t (table ;res))
+  (merge t {:offset-secs (offset-str->secs (t :offset))}))
 
-(defn as-epoch
-  "Convert ISO 8601 timestamp to Unix epoch seconds (UTC)"
-  [iso-string]
-  (def parsed (parse-iso8601 iso-string))
-  (def date-struct {:year (parsed :year)
-                    :month (dec (parsed :month))
-                    :month-day (dec (parsed :day))
-                    :hours (scan-number (parsed :hours))
-                    :minutes (scan-number (parsed :minutes))
-                    :seconds (scan-number (parsed :seconds))})
-  (- (os/mktime date-struct) (parsed :tz-offset-seconds)))
+# Public functions
 
-(defn as-quasi-rfc2822
-  "Convert ISO 8601 datetime to YYYY-MM-DD HH:MM:SS +ZZZZ format"
+(defn local-offset
+  "Calculates the offset of the local timezone"
+  [&opt iso?]
+  (def secs (os/mktime (os/date 0 true)))
+  (when (zero? secs)
+    (break "+0000"))
+  (def abs-secs (math/abs secs))
+  (def hrs (math/floor (/ abs-secs 3600)))
+  (def mins (* 60 (- (/ abs-secs 3600) hrs)))
+  (string (if (> secs 0) "+" "-")
+          (min-digits 2 hrs)
+          (when iso? ":")
+          (min-digits 2 mins)))
+
+(defn iso8601->epoch
+  "Converts ISO 8601 timestamp to Unix epoch seconds (UTC)"
   [iso-string]
-  (def parsed (parse-iso8601 iso-string))
-  (string (parsed :date-part) " "
-          (parsed :hours) ":"
-          (parsed :minutes) ":"
-          (parsed :seconds) " "
-          (parsed :tz-offset-str)))
+  (def t (parse-iso8601 iso-string))
+  (def date-struct {:year (t :year)
+                    :month (dec (t :month))
+                    :month-day (dec (t :day))
+                    :hours (t :hours)
+                    :minutes (t :minutes)
+                    :seconds (t :seconds)})
+  (- (os/mktime date-struct) (get t :offset-secs 0)))
+
+(defn iso8601->rfc2822ish
+  "Converts ISO 8601 datetime to an RFC 2822ish datetime"
+  [iso-string]
+  (def t (parse-iso8601 iso-string))
+  (def date (string (t :year) "-"
+                    (min-digits 2 (t :month)) "-"
+                    (min-digits 2 (t :day))))
+  (def time (cond
+              (and (t :hours) (t :seconds))
+              (string " " (min-digits 2 (t :hours))
+                      ":" (min-digits 2 (t :minutes))
+                      ":" (min-digits 2 (t :seconds)))
+              (and (t :hours) (t :minutes))
+              (string " " (min-digits 2 (t :hours))
+                      ":" (min-digits 2 (t :minutes)))))
+  (def offset (when (t :offset) (string " " (t :offset))))
+  (string date time offset))
+
+(defn rfc2822ish->epoch
+  "Converts RFC 2822ish datetime to Unix epoch seconds (UTC)"
+  [rfc-string]
+  (def t (parse-rfc2822ish rfc-string))
+  (def date-struct {:year (t :year)
+                    :month (dec (t :month))
+                    :month-day (dec (t :day))
+                    :hours (t :hours)
+                    :minutes (t :minutes)
+                    :seconds (t :seconds)})
+  (- (os/mktime date-struct) (get t :offset-secs 0)))
+
+(defn rfc2822ish->iso8601
+  "Converts RFC 2822ish datetime to ISO 8601 datetime"
+  [rfc-string]
+  (def t (parse-rfc2822ish rfc-string))
+  (def date (string (t :year) "-"
+                    (min-digits 2 (t :month)) "-"
+                    (min-digits 2 (t :day))))
+  (def time (cond
+              (and (t :hours) (t :seconds))
+              (string "T" (min-digits 2 (t :hours))
+                      ":" (min-digits 2 (t :minutes))
+                      ":" (min-digits 2 (t :seconds)))
+              (and (t :hours) (t :minutes))
+              (string "T" (min-digits 2 (t :hours))
+                      ":" (min-digits 2 (t :minutes)))))
+  (def offset (when (t :offset) (t :offset)))
+  (string date time offset))

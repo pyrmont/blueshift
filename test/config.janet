@@ -1,71 +1,43 @@
 (use ../deps/testament)
 
-(import ../lib/config :as c)
+(review ../lib/config :as c)
 
-(deftest jdn-str-to-arr-empty-dict
-  (def input "{}")
-  (def result (c/jdn-str->jdn-arr input))
-  (is (== @[@["{" "}"]] result)))
+(deftest update-last-fetch-empty-file
+  (def input "")
+  (def result (c/update-last-fetch input 123))
+  (is (string/find "last-fetch = 123" result)))
 
-(deftest jdn-str-to-arr-simple-dict
-  (def input "{:foo \"bar\"}")
-  (def result (c/jdn-str->jdn-arr input))
-  (is (array? result))
-  (def dict (first result))
-  (is (== "{" (first dict))))
+(deftest update-last-fetch-add-to-existing
+  (def input "[bluesky]\nhandle = \"test\"")
+  (def result (c/update-last-fetch input 456))
+  (is (string/find "[bluesky]" result))
+  (is (string/find "last-fetch = 456" result))
+  # Verify last-fetch comes before the section
+  (def lf-pos (string/find "last-fetch" result))
+  (def section-pos (string/find "[bluesky]" result))
+  (is (< lf-pos section-pos)))
 
-(deftest jdn-arr-to-str-empty-dict
-  (def input @[@["{" "}"]])
-  (def result (c/jdn-arr->jdn-str input))
-  (is (== "{}" result)))
+(deftest update-last-fetch-update-existing
+  (def input "last-fetch = 100\n\n[bluesky]\nhandle = \"test\"")
+  (def result (c/update-last-fetch input 789))
+  (is (string/find "last-fetch = 789" result))
+  (is (not (string/find "last-fetch = 100" result))))
 
-(deftest jdn-roundtrip
-  (def original "{:foo \"bar\"\n :baz 42}")
-  (def arr (c/jdn-str->jdn-arr original))
-  (def result (c/jdn-arr->jdn-str arr))
-  (is (== original result)))
+(deftest update-last-fetch-preserves-content
+  (def input "[bluesky]\nhandle = \"test\"\npassword = \"secret\"")
+  (def result (c/update-last-fetch input 999))
+  (is (string/find "handle = \"test\"" result))
+  (is (string/find "password = \"secret\"" result))
+  (is (string/find "last-fetch = 999" result))
+  # Verify last-fetch comes before the section
+  (def lf-pos (string/find "last-fetch" result))
+  (def section-pos (string/find "[bluesky]" result))
+  (is (< lf-pos section-pos)))
 
-(deftest add-to-empty-dict
-  (def jdn "{}")
-  (def ds (c/jdn-str->jdn-arr jdn))
-  (c/add-to ds [:test] 123)
-  (def result (c/jdn-arr->jdn-str ds))
-  (is (== "{:test 123}" result)))
-
-(deftest add-to-existing-dict
-  (def jdn "{:foo \"bar\"}")
-  (def ds (c/jdn-str->jdn-arr jdn))
-  (c/add-to ds [:baz] 42)
-  (def result (c/jdn-arr->jdn-str ds))
-  (is (string/find ":baz 42" result))
-  (is (string/find ":foo \"bar\"" result)))
-
-(deftest upd-in-simple
-  (def jdn "{:foo \"bar\"}")
-  (def ds (c/jdn-str->jdn-arr jdn))
-  (c/upd-in ds [:foo] :to "baz")
-  (def result (c/jdn-arr->jdn-str ds))
-  (is (== "{:foo \"baz\"}" result)))
-
-(deftest upd-in-number
-  (def jdn "{:count 1}")
-  (def ds (c/jdn-str->jdn-arr jdn))
-  (c/upd-in ds [:count] :to 42)
-  (def result (c/jdn-arr->jdn-str ds))
-  (is (== "{:count 42}" result)))
-
-(deftest rem-from-single-key
-  (def jdn "{:foo \"bar\"}")
-  (def ds (c/jdn-str->jdn-arr jdn))
-  (c/rem-from ds [:foo])
-  (def result (c/jdn-arr->jdn-str ds))
-  (is (== "{}" result)))
-
-(deftest rem-from-one-of-many
-  (def jdn "{:foo \"bar\"\n :baz 42}")
-  (def ds (c/jdn-str->jdn-arr jdn))
-  (c/rem-from ds [:foo])
-  (def result (c/jdn-arr->jdn-str ds))
-  (is (== "{:baz 42}" result)))
+(deftest update-last-fetch-with-whitespace
+  (def input "  last-fetch = 100\n\n[bluesky]\nhandle = \"test\"")
+  (def result (c/update-last-fetch input 200))
+  (is (string/find "last-fetch = 200" result))
+  (is (not (string/find "last-fetch = 100" result))))
 
 (run-tests!)

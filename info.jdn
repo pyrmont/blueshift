@@ -28,6 +28,12 @@
              :prefix "deps/testament"
              :paths ["lib/testament.janet"
                      "init.janet"
+                     "LICENSE"]}
+            {:name "tomlin"
+             :url "https://github.com/pyrmont/tomlin"
+             :prefix "deps/tomlin"
+             :paths ["lib"
+                     "init.janet"
                      "LICENSE"]}]
  :artifacts {:executables [{:name "blues"
                             :quickbin? true

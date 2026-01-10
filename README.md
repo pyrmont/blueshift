@@ -41,16 +41,19 @@ $ janet --install .
 ## Configuring
 
 Blueshift looks for your credentials for Bluesky and GitHub in the
-configuration file. By default, this is `config.jdn` in the current working
+configuration file. By default, this is `config.toml` in the current working
 directory and will look like this:
 
-```janet
-{:bluesky {:handle "your-bluesky-handle"
-           :password "your-app-password"}
- :github {:owner "your-github-username"
-          :token "your-github-pat"
-          :repo "your-repo-name"
-          :posts-dir "src/_posts"}}
+```toml
+[bluesky]
+handle = "your-bluesky-handle"
+password = "your-app-password"
+
+[github]
+owner = "your-github-username"
+token = "your-github-pat"
+repo = "your-repo-name"
+posts-dir = "src/_posts"
 ```
 
 ### Bluesky
@@ -59,7 +62,7 @@ Create an app password:
 
 1. navigate to Bluesky's [App Passwords][ap] page
 2. click or tap on 'Add App Password'
-3. add the generated password to `config.jdn`
+3. add the generated password to `config.toml`
 
 [ap]: https://bsky.app/settings/app-passwords
 
@@ -70,7 +73,7 @@ Create a fine-grained personal access token:
 1. log in to GitHub's [Personal Access Tokens][pat] page
 2. click or tap on 'Generate new token'
 3. ensure that read/write permissions for 'content' of the repository are selected
-4. add the generated token to `config.jdn`
+4. add the generated token to `config.toml`
 
 [pat]: https://github.com/settings/personal-access-tokens
 

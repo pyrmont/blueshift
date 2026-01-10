@@ -3,6 +3,7 @@
 (import ./date)
 (import ./github)
 (import ./markdown)
+(import ../deps/tomlin)
 
 (def- nl "\n")
 (def- sp " ")
@@ -11,7 +12,7 @@
   [file]
   (def exists? (= :file (os/stat file :mode)))
   (assertf exists? "file %s not found" file)
-  (-> (slurp file) parse))
+  (-> (slurp file) (tomlin/toml->janet)))
 
 (defn- log
   [& args]
@@ -92,10 +93,6 @@
   (unless (and skip-github? (not update?))
     (log "Configuration...")
     (def now (os/mktime (os/date)))
-    (def ds (config/jdn-str->jdn-arr (slurp config-file)))
-    (if (has-key? config :last-fetch)
-      (config/upd-in ds [:last-fetch] :to now)
-      (config/add-to ds [:last-fetch] now))
-    (spit config-file (config/jdn-arr->jdn-str ds))
+    (config/save-last-fetch config-file now)
     (log sp "saved" nl))
   (log "Done!" nl))

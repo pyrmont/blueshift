@@ -9,7 +9,7 @@
   ```
   {:rules ["--config"     {:kind    :single
                            :short   "c"
-                           :default "config.jdn"
+                           :default "config.toml"
                            :proxy   "path"
                            :help    "The <path> to the configuration file."}
            "--echo"       {:kind    :flag

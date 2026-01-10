@@ -1,6 +1,0 @@
-{:bluesky {:handle "your-bluesky-handle"
-           :password "your-app-password"}
- :github {:owner "your-github-username"
-          :token "your-github-pat"
-          :repo "your-repo-name"
-          :posts-dir "src/_posts"}}

@@ -35,9 +35,9 @@ Options
 -------
 
 - **-c** _file_ | **--config** _file_:
-  A path to the configuration file. This defaults to ``config.jdn`` in the
+  A path to the configuration file. This defaults to ``config.toml`` in the
   current working directory. For more information about the configuration file,
-  see CONFIGURATION below.
+  see `<CONFIGURATION>` below.
 
 - **-e** | **--echo**:
   Echo post data to stdout. This option is useful for previewing posts before
@@ -70,7 +70,7 @@ Options
   is assumed.
 
 - **-u** | **--update**:
-  Force the __:last-fetch__ key in the configuration file to be updated. By
+  Force the __last-fetch__ key in the configuration file to be updated. By
   default, **blues** only updates this timestamp when posts are successfully
   fetched and uploaded. This option is useful when you want to update the
   timestamp without uploading posts.
@@ -78,56 +78,60 @@ Options
 CONFIGURATION
 =============
 
-**blues** requires a configuration file in JDN (Janet Data Notation) format.
+**blues** requires a configuration file in TOML format.
 An example configuration file looks like this:
 
 ````
-{:bluesky {:handle "pyrmont.inqk.net"
-           :password "trustno1"}
- :github {:owner "pyrmont"
-          :token "ghp_iwant2believe"
-          :repo "updates.inqk.net"
-          :posts-dir "src/_posts/2025"}
- :ignore ["#private" "#draft"]
- :repost? false
- :quote-posts? true}
+ignore = ["#private", "#draft"]
+repost? = false
+quote-posts? = true
+
+[bluesky]
+handle = "pyrmont.inqk.net"
+password = "trustno1"
+
+[github]
+owner = "pyrmont"
+token = "ghp_iwant2believe"
+repo = "updates.inqk.net"
+posts-dir = "src/_posts/2025"
 ````
 
-Required Configuration Keys
-----------------------------
+Required Keys
+-------------
 
-- __:bluesky__:
-  A struct/table containing Bluesky authentication credentials. See
+- __bluesky__:
+  A TOML section containing Bluesky authentication credentials. See
   `<CREDENTIALS>` below for more information.
 
-  - __:handle__: Your Bluesky handle (e.g., ``user.bsky.social``).
-  - __:password__: Your Bluesky app password (not your account password).
+  - __handle__: Your Bluesky handle (e.g., ``user.bsky.social``).
+  - __password__: Your Bluesky app password (not your account password).
 
-- __:github__:
-  A struct/table containing GitHub repository and authentication details. See
+- __github__:
+  A TOML section containing GitHub repository and authentication details. See
   `<CREDENTIALS>` below for more information.
 
-  - __:owner__: The GitHub username or organization that owns the repository.
-  - __:token__: A GitHub Personal Access Token with write access to the
+  - __owner__: The GitHub username or organization that owns the repository.
+  - __token__: A GitHub Personal Access Token with write access to the
     repository.
-  - __:repo__: The name of the GitHub repository.
-  - __:posts-dir__: The directory path within the repository where posts should
+  - __repo__: The name of the GitHub repository.
+  - __posts-dir__: The directory path within the repository where posts should
     be uploaded.
 
-Optional Configuration Keys
-----------------------------
+Optional Keys
+-------------
 
-- __:ignore__:
+- __ignore__:
   An array of strings. Posts containing any of these strings will be filtered
   out. This can also be specified via the **--ignore** command-line option.
 
-- __:repost?__:
+- __repost?__:
   A boolean indicating whether to include reposts. Defaults to ``false``.
 
-- __:quote-posts?__:
+- __quote-posts?__:
   A boolean indicating whether to include quote posts. Defaults to ``false``.
 
-- __:last-fetch__:
+- __last-fetch__:
   A Unix epoch timestamp automatically maintained by **blues** to track when
   posts were last fetched. This key is added and updated automatically; you
   should not need to set it manually.
@@ -165,7 +169,7 @@ be ``1``.
 FILES
 =====
 
-- `./config.jdn`:
+- `./config.toml`:
   Default configuration file location in the current working directory.
 
 EXAMPLES
@@ -180,7 +184,7 @@ $ blues
 Archive posts using a custom configuration file:
 
 ````
-$ blues --config ~/.blues/config.jdn
+$ blues --config ~/.blues/config.toml
 ````
 
 Archive posts but filter out any containing ``#nofilter``:

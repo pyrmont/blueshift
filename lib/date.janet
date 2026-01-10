@@ -70,6 +70,60 @@
           (when iso? ":")
           (min-digits 2 mins)))
 
+(defn epoch->iso8601
+  "Converts Unix epoch timestamp to ISO 8601 datetime with optional offset"
+  [epoch &opt offset]
+  (default offset 0)
+  (def offset-secs (if (string? offset)
+                     (offset-str->secs offset)
+                     offset))
+  (def adjusted-epoch (+ epoch offset-secs))
+  (def d (os/date adjusted-epoch))
+  (def date (string (d :year) "-"
+                    (min-digits 2 (inc (d :month))) "-"
+                    (min-digits 2 (inc (d :month-day)))))
+  (def time (string "T" (min-digits 2 (d :hours))
+                    ":" (min-digits 2 (d :minutes))
+                    ":" (min-digits 2 (d :seconds))))
+  (def offset-str (if (zero? offset-secs)
+                    "Z"
+                    (do
+                      (def abs-secs (math/abs offset-secs))
+                      (def hrs (math/floor (/ abs-secs 3600)))
+                      (def mins (math/floor (/ (% abs-secs 3600) 60)))
+                      (string (if (>= offset-secs 0) "+" "-")
+                              (min-digits 2 hrs)
+                              ":"
+                              (min-digits 2 mins)))))
+  (string date time offset-str))
+
+(defn epoch->rfc2822ish
+  "Converts Unix epoch timestamp to RFC 2822ish datetime with optional offset"
+  [epoch &opt offset]
+  (default offset 0)
+  (def offset-secs (if (string? offset)
+                     (offset-str->secs offset)
+                     offset))
+  (def adjusted-epoch (+ epoch offset-secs))
+  (def d (os/date adjusted-epoch))
+  (def date (string (d :year) "-"
+                    (min-digits 2 (inc (d :month))) "-"
+                    (min-digits 2 (inc (d :month-day)))))
+  (def time (string " " (min-digits 2 (d :hours))
+                    ":" (min-digits 2 (d :minutes))
+                    ":" (min-digits 2 (d :seconds))))
+  (def offset-str (if (zero? offset-secs)
+                    " +0000"
+                    (do
+                      (def abs-secs (math/abs offset-secs))
+                      (def hrs (math/floor (/ abs-secs 3600)))
+                      (def mins (math/floor (/ (% abs-secs 3600) 60)))
+                      (string " "
+                              (if (>= offset-secs 0) "+" "-")
+                              (min-digits 2 hrs)
+                              (min-digits 2 mins)))))
+  (string date time offset-str))
+
 (defn iso8601->epoch
   "Converts ISO 8601 timestamp to Unix epoch seconds (UTC)"
   [iso-string]

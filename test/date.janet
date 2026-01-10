@@ -120,6 +120,78 @@
   (def expect "2024-01-15T12:30+0000")
   (is (== expect (d/rfc2822ish->iso8601 input))))
 
+# Tests for epoch->iso8601
+(deftest epoch->iso8601-utc-default
+  (def input 1705321845)
+  (def expect "2024-01-15T12:30:45Z")
+  (is (== expect (d/epoch->iso8601 input))))
+
+(deftest epoch->iso8601-utc-explicit
+  (def input 1705321845)
+  (def expect "2024-01-15T12:30:45Z")
+  (is (== expect (d/epoch->iso8601 input 0))))
+
+(deftest epoch->iso8601-positive-offset-numeric
+  (def input 1705321845)
+  (def expect "2024-01-15T21:30:45+09:00")
+  (is (== expect (d/epoch->iso8601 input (* 9 3600)))))
+
+(deftest epoch->iso8601-positive-offset-string
+  (def input 1705321845)
+  (def expect "2024-01-15T21:30:45+09:00")
+  (is (== expect (d/epoch->iso8601 input "+0900"))))
+
+(deftest epoch->iso8601-negative-offset-numeric
+  (def input 1705321845)
+  (def expect "2024-01-15T07:30:45-05:00")
+  (is (== expect (d/epoch->iso8601 input (* -5 3600)))))
+
+(deftest epoch->iso8601-negative-offset-string
+  (def input 1705321845)
+  (def expect "2024-01-15T07:30:45-05:00")
+  (is (== expect (d/epoch->iso8601 input "-0500"))))
+
+(deftest epoch->iso8601-partial-hour-offset
+  (def input 1705321845)
+  (def expect "2024-01-15T18:00:45+05:30")
+  (is (== expect (d/epoch->iso8601 input "+0530"))))
+
+# Tests for epoch->rfc2822ish
+(deftest epoch->rfc2822ish-utc-default
+  (def input 1705321845)
+  (def expect "2024-01-15 12:30:45 +0000")
+  (is (== expect (d/epoch->rfc2822ish input))))
+
+(deftest epoch->rfc2822ish-utc-explicit
+  (def input 1705321845)
+  (def expect "2024-01-15 12:30:45 +0000")
+  (is (== expect (d/epoch->rfc2822ish input 0))))
+
+(deftest epoch->rfc2822ish-positive-offset-numeric
+  (def input 1705321845)
+  (def expect "2024-01-15 21:30:45 +0900")
+  (is (== expect (d/epoch->rfc2822ish input (* 9 3600)))))
+
+(deftest epoch->rfc2822ish-positive-offset-string
+  (def input 1705321845)
+  (def expect "2024-01-15 21:30:45 +0900")
+  (is (== expect (d/epoch->rfc2822ish input "+0900"))))
+
+(deftest epoch->rfc2822ish-negative-offset-numeric
+  (def input 1705321845)
+  (def expect "2024-01-15 07:30:45 -0500")
+  (is (== expect (d/epoch->rfc2822ish input (* -5 3600)))))
+
+(deftest epoch->rfc2822ish-negative-offset-string
+  (def input 1705321845)
+  (def expect "2024-01-15 07:30:45 -0500")
+  (is (== expect (d/epoch->rfc2822ish input "-0500"))))
+
+(deftest epoch->rfc2822ish-partial-hour-offset
+  (def input 1705321845)
+  (def expect "2024-01-15 18:00:45 +0530")
+  (is (== expect (d/epoch->rfc2822ish input "+0530"))))
+
 # Round-trip tests
 (deftest roundtrip-iso-to-rfc-to-iso
   (def original "2024-01-15T12:30:45+05:30")
@@ -133,5 +205,17 @@
   (def iso-epoch (d/iso8601->epoch iso-input))
   (def rfc-epoch (d/rfc2822ish->epoch rfc-input))
   (is (== iso-epoch rfc-epoch)))
+
+(deftest roundtrip-epoch-iso-epoch
+  (def original-epoch 1705321845)
+  (def iso (d/epoch->iso8601 original-epoch "+0900"))
+  (def back-epoch (d/iso8601->epoch iso))
+  (is (== original-epoch back-epoch)))
+
+(deftest roundtrip-epoch-rfc-epoch
+  (def original-epoch 1705321845)
+  (def rfc (d/epoch->rfc2822ish original-epoch "+0900"))
+  (def back-epoch (d/rfc2822ish->epoch rfc))
+  (is (== original-epoch back-epoch)))
 
 (run-tests!)

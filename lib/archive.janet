@@ -39,7 +39,8 @@
 
 (defn make
   "Makes an archive of posts"
-  [&named config-file since ignores limit echo? skip-bluesky? skip-github?]
+  [&named config-file since ignores limit echo? skip-bluesky? skip-github?
+   update?]
   (log "Loading configuration from " config-file "...")
   (def config (load-file config-file))
   (log sp "done" nl)
@@ -88,15 +89,13 @@
                                 contents))
           (when uploaded?
             (log sp sp "Uploaded " filename nl))))))
-  (unless (empty? posts)
+  (unless (and skip-github? (not update?))
     (log "Configuration...")
-    (def most-recent ((first posts) :created))
-    (def most-recent-epoch (date/iso8601->epoch most-recent))
+    (def now (os/mktime (os/date)))
     (def ds (config/jdn-str->jdn-arr (slurp config-file)))
     (if (has-key? config :last-fetch)
-      (config/upd-in ds [:last-fetch] :to most-recent-epoch)
-      (config/add-to ds [:last-fetch] most-recent-epoch))
+      (config/upd-in ds [:last-fetch] :to now)
+      (config/add-to ds [:last-fetch] now))
     (spit config-file (config/jdn-arr->jdn-str ds))
     (log sp "saved" nl))
   (log "Done!" nl))
-

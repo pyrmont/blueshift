@@ -29,6 +29,9 @@
                            :short   "s"
                            :proxy   "date"
                            :help    "Ignore all posts before <date>."}
+           "--update"     {:kind    :flag
+                           :short   "u"
+                           :help    "Force the :last-fetch key in configuration to be updated."}
            "--no-bluesky" {:kind    :flag
                            :short   "B"
                            :hide?   true
@@ -83,6 +86,7 @@
                 :limit (-?> (opts "limit") (scan-number))
                 :echo? (opts "echo")
                 :skip-bluesky? (opts "no-bluesky")
-                :skip-github? (opts "no-github")))
+                :skip-github? (opts "no-github")
+                :update? (opts "update")))
 
 (defn main [& args] (run))

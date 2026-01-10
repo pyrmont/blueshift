@@ -20,15 +20,17 @@
   (flush))
 
 (defn- make-filter
-  [&opt ignores]
+  [&opt ignores repost? quote-posts?]
   (default ignores [])
   (fn :filter-out [post]
     (def text (post :text))
     (cond
-      (or (post :repost?)
-          (post :reply?)
-          (post :quote-post?)
+      (or (post :reply?)
           (string/has-prefix? "@" text))
+      false
+      (and (post :repost?) (not repost?))
+      false
+      (and (post :quote-post?) (not quote-posts?))
       false
       (some (fn [ignore] (string/find ignore text)) ignores)
       false
@@ -57,14 +59,14 @@
       (log sp (length all-posts) " posts fetched" nl)
       (log "Filtering posts...")
       (def ignores1 (or ignores (config :ignore)))
-      (array/concat posts (filter (make-filter ignores1) all-posts))
+      (def repost? (config :repost?))
+      (def quote-posts? (config :quote-posts?))
+      (array/concat posts (filter (make-filter ignores1 repost? quote-posts?) all-posts))
       (log sp (length posts) " posts remaining" nl)
       (when (and echo? (not (empty? posts)))
         (log "Printing posts..." nl)
         (each post posts
-          (print "----")
-          (print (post :created))
-          (print (post :text)))
+          (print (markdown/contents post config)))
         (print "----"))))
   (if skip-github?
     (log "Skipping pushing to GitHub... skipped" nl)
@@ -85,13 +87,16 @@
                                 path
                                 contents))
           (when uploaded?
-            (log sp sp "Uploaded " filename nl)))
-        (def most-recent ((first posts) :created))
-        (def most-recent-epoch (date/iso8601->epoch most-recent))
-        (def ds (config/jdn-str->jdn-arr (slurp config-file)))
-        (if (has-key? config :last-fetch)
-          (config/upd-in ds [:last-fetch] :to most-recent-epoch)
-          (config/add-to ds [:last-fetch] most-recent-epoch))
-        (spit config-file (config/jdn-arr->jdn-str ds)))))
+            (log sp sp "Uploaded " filename nl))))))
+  (unless (empty? posts)
+    (log "Configuration...")
+    (def most-recent ((first posts) :created))
+    (def most-recent-epoch (date/iso8601->epoch most-recent))
+    (def ds (config/jdn-str->jdn-arr (slurp config-file)))
+    (if (has-key? config :last-fetch)
+      (config/upd-in ds [:last-fetch] :to most-recent-epoch)
+      (config/add-to ds [:last-fetch] most-recent-epoch))
+    (spit config-file (config/jdn-arr->jdn-str ds))
+    (log sp "saved" nl))
   (log "Done!" nl))
 

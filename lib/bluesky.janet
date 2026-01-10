@@ -24,21 +24,56 @@
       "app.bsky.embed.external#view"
       (do
         (def external (embed "external"))
+        (def desc (external "description"))
         (put res :links [{:title (external "title")
-                          :uri (external "uri")}]))))
+                          :uri (external "uri")
+                          :desc (when (and desc (not (empty? (string/trim desc)))) desc)
+                          :thumb (external "thumb")}]))
+      "app.bsky.embed.record#view"
+      (do
+        (def record (embed "record"))
+        (when record
+          (put res :quoted-post (record "uri"))))
+      "app.bsky.embed.recordWithMedia#view"
+      (do
+        # Extract quoted post URI
+        (def record (get embed "record"))
+        (when record
+          (def inner-record (get record "record"))
+          (when inner-record
+            (put res :quoted-post (inner-record "uri"))))
+        # Extract media
+        (def media (embed "media"))
+        (when media
+          (case (media "$type")
+            "app.bsky.embed.images#view"
+            (put res :images (seq [image :in (media "images")] {:uri (image "fullsize")}))
+            "app.bsky.embed.external#view"
+            (do
+              (def external (media "external"))
+              (def desc (external "description"))
+              (put res :links [{:title (external "title")
+                                :uri (external "uri")
+                                :desc (when (and desc (not (empty? (string/trim desc)))) desc)
+                                :thumb (external "thumb")}])))))))
   (table/to-struct res))
 
 (defn- post-data
   [ds]
   (def post (get ds "post"))
   (def record (get post "record"))
+  (def embed-type (get-in record ["embed" "$type"]))
+  (def embeds (embed-data (post "embed")))
   {:text (record "text")
    :uri (post "uri")
    :created (record "createdAt")
-   :repost? (record "reason")
+   :repost? (ds "reason")
    :reply? (record "reply")
-   :quote-post? (= "app.bsky.embed.record" (get-in record ["embed" "$type"]))
-   :embeds (embed-data (post "embed"))})
+   :quote-post? (or (= "app.bsky.embed.record" embed-type)
+                    (= "app.bsky.embed.recordWithMedia" embed-type))
+   :embeds embeds
+   :facets (record "facets")
+   :ref (embeds :quoted-post)})
 
 (defn create-session
   "Authenticate with Bluesky and return session with DID and access JWT"

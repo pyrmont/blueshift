@@ -3,16 +3,9 @@
 (import ./date)
 (import ./github)
 (import ./markdown)
-(import ../deps/tomlin)
 
 (def- nl "\n")
 (def- sp " ")
-
-(defn- load-file
-  [file]
-  (def exists? (= :file (os/stat file :mode)))
-  (assertf exists? "file %s not found" file)
-  (-> (slurp file) (tomlin/toml->janet)))
 
 (defn- log
   [& args]
@@ -43,7 +36,7 @@
   [&named config-file since ignores limit echo? skip-bluesky? skip-github?
    update?]
   (log "Loading configuration from " config-file "...")
-  (def config (load-file config-file))
+  (def config (config/load config-file))
   (log sp "done" nl)
   (def posts @[])
   (if skip-bluesky?
@@ -80,7 +73,7 @@
         (def posts-dir (github-config :posts-dir))
         (each post posts
           (def filename (markdown/filename post))
-          (def contents (markdown/contents post))
+          (def contents (markdown/contents post config))
           (def path (string posts-dir "/" filename))
           (def uploaded?
             (github/upload-file (github-config :token)
@@ -90,9 +83,12 @@
                                 contents))
           (when uploaded?
             (log sp sp "Uploaded " filename nl))))))
-  (unless (and skip-github? (not update?))
+  (when (or update?
+            (and (not (empty? posts)) (not skip-github?)))
     (log "Configuration...")
-    (def now (os/mktime (os/date)))
-    (config/save-last-fetch config-file now)
+    (def time (if update?
+                (-> (os/mktime (os/date)) date/epoch->iso8601)
+                ((first posts) :created)))
+    (config/save-last-fetch config-file time)
     (log sp "saved" nl))
   (log "Done!" nl))

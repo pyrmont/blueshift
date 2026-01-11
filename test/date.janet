@@ -2,6 +2,17 @@
 
 (import ../lib/date :as d)
 
+# Tests for min-digits
+(deftest min-digits-single-digit
+  (is (== "05" (d/min-digits 2 5)))
+  (is (== "09" (d/min-digits 2 9)))
+  (is (== "00" (d/min-digits 2 0))))
+
+(deftest min-digits-double-digit
+  (is (== "15" (d/min-digits 2 15)))
+  (is (== "23" (d/min-digits 2 23)))
+  (is (== "10" (d/min-digits 2 10))))
+
 # Tests for local-offset
 (deftest local-offset-format
   (def offset (d/local-offset))

@@ -1,3 +1,7 @@
+(import ../deps/tomlin)
+
+(import ./date)
+
 (defn- update-last-fetch
   ```
   Updates or adds the last-fetch value in a TOML configuration file.
@@ -25,3 +29,23 @@
   (def content (slurp file-path))
   (def updated (update-last-fetch content value))
   (spit file-path updated))
+
+(defn load
+  ```
+  Loads the TOML configuration file from disk.
+  ```
+  [file-path]
+  (def exists? (= :file (os/stat file-path :mode)))
+  (assertf exists? "file %s not found" file-path)
+  (def config (-> (slurp file-path) (tomlin/toml->janet)))
+  (when (config :last-fetch)
+    (def t (config :last-fetch))
+    (def iso (string (t :year)
+                     "-" (date/min-digits 2 (t :month))
+                     "-" (date/min-digits 2 (t :day))
+                     "T" (date/min-digits 2 (t :hour))
+                     ":" (date/min-digits 2 (t :mins))
+                     ":" (date/min-digits 2 (t :secs))
+                     "Z"))
+    (put config :last-fetch (date/iso8601->epoch iso)))
+  config)

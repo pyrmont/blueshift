@@ -1,9 +1,3 @@
-(defn- min-digits
-  "Creates a string that is at least the minimum number of digits"
-  [min-len n]
-  (def s (string n))
-  (string (string/repeat "0" (max 0 (- min-len (length s)))) s))
-
 (defn- offset-str->secs
   "Converts an offset string to seconds"
   [offset-str]
@@ -55,6 +49,12 @@
   (merge t {:offset-secs (offset-str->secs (t :offset))}))
 
 # Public functions
+
+(defn min-digits
+  "Creates a string that is at least the minimum number of digits"
+  [min-len n]
+  (def s (string n))
+  (string (string/repeat "0" (max 0 (- min-len (length s)))) s))
 
 (defn local-offset
   "Calculates the offset of the local timezone"

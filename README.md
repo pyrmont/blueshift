@@ -82,7 +82,7 @@ Create a fine-grained personal access token:
 Run `blues --help` for usage information. The command-line arguments are
 explained in more detail in the [man page][].
 
-[man page]: https://github.com/pyrmont/blueshift/blob/master/man/man1/blueshift.1.predoc
+[man page]: man/man1/blues.1.predoc
 
 ## Bugs
 

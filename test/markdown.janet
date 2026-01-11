@@ -30,7 +30,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -48,7 +48,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -71,7 +71,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     link:
       url: https://example.com/article
@@ -96,7 +96,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -116,7 +116,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -136,7 +136,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -162,7 +162,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -180,7 +180,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -198,7 +198,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -218,7 +218,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -238,7 +238,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     ---
 
@@ -256,7 +256,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     repost: true
     ---
@@ -276,7 +276,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     quote-post: true
     ref: at://did:plc:example/app.bsky.feed.post/abc123
@@ -301,7 +301,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     quote-post: true
     ref: at://did:plc:example/app.bsky.feed.post/xyz789
@@ -329,7 +329,7 @@
   (def expect
     ```
     ---
-    date: 2024-01-15 12:30:45 +0000
+    date: 2024-01-15T12:30:45Z
     source: https://example.com/post/123
     link:
       url: https://example.com/article

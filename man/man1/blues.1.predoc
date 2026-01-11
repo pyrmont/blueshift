@@ -87,6 +87,8 @@ An example configuration file looks like this:
 ignore = ["#private", "#draft"]
 repost? = false
 quote-posts? = true
+time-offset = "+0900"
+date-format = "iso8601"
 last-fetch = 2025-01-15T12:30:45Z
 
 [bluesky]
@@ -138,6 +140,12 @@ Optional Keys
   A timezone offset string (e.g., ``"+0900"`` or ``"-0500"``) used to format
   dates in the YAML frontmatter of generated Markdown files. If not specified,
   dates are formatted in UTC.
+
+- __date-format__:
+  The format to use for timestamps in the YAML frontmatter of generated
+  Markdown files. Accepts either ``"iso8601"`` (e.g.,
+  ``2025-01-15T12:30:45+09:00``) or ``"rfc2822ish"`` (e.g.,
+  ``2025-01-15 12:30:45 +0900``). Defaults to ``"iso8601"``.
 
 - __last-fetch__:
   An ISO 8601 timestamp automatically maintained by **blues** to track when

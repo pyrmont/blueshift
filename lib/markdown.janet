@@ -80,8 +80,12 @@
   "Create YAML-style frontmatter for the Markdown file"
   [data opts]
   (def buf @"")
-  (def date (-> (date/iso8601->epoch (data :created))
-                (date/epoch->rfc2822ish (opts :time-offset))))
+  (def epoch (date/iso8601->epoch (data :created)))
+  (def format (get opts :date-format "iso8601"))
+  (def date (case format
+              "iso8601" (date/epoch->iso8601 epoch (opts :time-offset))
+              "rfc2822ish" (date/epoch->rfc2822ish epoch (opts :time-offset))
+              (errorf "unrecognised date format: %s" format)))
   (buffer/push buf "---" nl)
   (buffer/push buf "date: " date nl)
   (buffer/push buf "source: " (data :uri) nl)

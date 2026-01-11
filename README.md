@@ -45,6 +45,9 @@ configuration file. By default, this is `config.toml` in the current working
 directory and will look like this:
 
 ```toml
+date-format = "iso8601"
+time-offset = "+0900"
+
 [bluesky]
 handle = "your-bluesky-handle"
 password = "your-app-password"

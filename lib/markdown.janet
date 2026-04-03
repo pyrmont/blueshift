@@ -76,6 +76,14 @@
     (string/slice full-slug 0 20)
     full-slug))
 
+(defn- quote-yaml
+  "Wrap a string in double quotes for safe YAML output"
+  [s]
+  (def escaped (->> s
+                    (string/replace-all `\` `\\`)
+                    (string/replace-all `"` `\"`)))
+  (string `"` escaped `"`))
+
 (defn- format-frontmatter
   "Create YAML-style frontmatter for the Markdown file"
   [data opts]
@@ -100,7 +108,7 @@
       (buffer/push buf "link:" nl)
       (buffer/push buf "  url: " (ln :uri) nl)
       (when (ln :title)
-        (buffer/push buf "  title: " (ln :title) nl))
+        (buffer/push buf "  title: " (quote-yaml (ln :title)) nl))
       (when (ln :desc)
         (if (string/find "\n" (ln :desc))
           # Multi-line description: use literal block scalar
@@ -109,7 +117,7 @@
             (each line (string/split "\n" (ln :desc))
               (buffer/push buf "    " line nl)))
           # Single-line description
-          (buffer/push buf "  desc: " (ln :desc) nl)))
+          (buffer/push buf "  desc: " (quote-yaml (ln :desc)) nl)))
       (when (ln :thumb)
         (buffer/push buf "  thumb: " (ln :thumb) nl))))
   (buffer/push buf "---" nl)

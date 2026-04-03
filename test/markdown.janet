@@ -75,8 +75,8 @@
     source: https://example.com/post/123
     link:
       url: https://example.com/article
-      title: Article Title
-      desc: An interesting article
+      title: "Article Title"
+      desc: "An interesting article"
       thumb: https://example.com/thumb.jpg
     ---
 
@@ -307,8 +307,8 @@
     ref: at://did:plc:example/app.bsky.feed.post/xyz789
     link:
       url: https://example.com/article
-      title: Article
-      desc: Description
+      title: "Article"
+      desc: "Description"
       thumb: https://example.com/thumb.jpg
     ---
 
@@ -333,7 +333,7 @@
     source: https://example.com/post/123
     link:
       url: https://example.com/article
-      title: Article
+      title: "Article"
       desc: |
         First line
         Second line

@@ -1,0 +1,13 @@
+{:ignore ["#private" "#draft"]
+ :repost? false
+ :quote-posts? false
+ :date-format "iso8601"
+ :time-offset "+0900"
+
+ :bluesky {:handle "your-bluesky-handle"
+           :password "your-app-password"}
+
+ :github {:owner "your-github-username"
+          :token "your-github-pat"
+          :repo "your-repo-name"
+          :posts-dir "src/_posts"}}

@@ -1,101 +1,88 @@
 # Blueshift
 
-[![Latest Release](https://img.shields.io/github/v/release/pyrmont/blueshift)](https://github.com/pyrmont/blueshift/releases/latest)
 [![Test Status](https://github.com/pyrmont/blueshift/workflows/test/badge.svg)](https://github.com/pyrmont/blueshift/actions?query=workflow%3Atest)
 
-Blueshift provides `blues`, a command-line utility to archive your Bluesky
+Blueshift provides `blues`, a Wattle command-line utility that archives Bluesky
 posts to a GitHub repository as Markdown files.
 
-## Requirements
+## Build
 
-Blueshift uses the `curl` command-line utility to communicate with the Bluesky
-servers. It must be on the PATH of the user that runs `blues`.
+Building requires Zig 0.16.0 and Wattle, installed with its `share/wattle`
+package (for example, by running `zig build -p ~/.local` in a Wattle checkout).
+The build is declared in `info.edn`, so no `build.zig` is needed. `-s` gives
+the Wattle install prefix, or set `WATTLE_PATH` instead:
 
-## Installing
-
-### Jeep
-
-If you use Janet, you can install `blues` using [Jeep][]:
-
-[Jeep]: https://github.com/pyrmont/jeep
-
-```
-$ jeep install https://github.com/pyrmont/blueshift
+```sh
+git clone https://github.com/pyrmont/blueshift.git
+cd blueshift
+wattle -s ~/.local build exe --release fast
 ```
 
-### From Source
+The executable is `zig-out/bin/blues`. It includes the native HTTP transport
+and does not require a separate Wattle installation at runtime.
 
-To build the `blues` binary from source, you need [Janet][] installed on your
-system. Then run:
+## Configure
 
-[Janet]: https://janet-lang.org
+Copy `config.example.edn` to `config.edn` and replace the example Bluesky
+app password and GitHub token. `config.edn` is ignored by Git.
 
-```shell
-$ git clone https://github.com/pyrmont/blueshift
-$ cd blueshift
-$ git tag --sort=creatordate
-$ git checkout <version> # check out the latest tagged version
-$ janet --install .
+```clojure
+{:ignore ["#private" "#draft"]
+ :repost? false
+ :quote-posts? false
+ :date-format "iso8601"
+ :time-offset "+0900"
+
+ :bluesky {:handle "your-bluesky-handle"
+           :password "your-app-password"}
+
+ :github {:owner "your-github-username"
+          :token "your-github-pat"
+          :repo "your-repo-name"
+          :posts-dir "src/_posts"}}
 ```
 
-## Configuring
+After uploading posts, `blues` records the creation time of the newest one as
+`:last-fetch` in the configuration file and fetches only later posts on the
+next run. Saving rewrites the file, so any comments in it are lost.
 
-Blueshift looks for your credentials for Bluesky and GitHub in the
-configuration file. By default, this is `config.toml` in the current working
-directory and will look like this:
+The GitHub token needs permission to read and write repository contents.
+Bluesky app passwords can be created in [Bluesky settings][app-passwords];
+fine-grained GitHub tokens can be created in [GitHub settings][github-tokens].
 
-```toml
-date-format = "iso8601"
-time-offset = "+0900"
+[app-passwords]: https://bsky.app/settings/app-passwords
+[github-tokens]: https://github.com/settings/personal-access-tokens
 
-[bluesky]
-handle = "your-bluesky-handle"
-password = "your-app-password"
+## Use
 
-[github]
-owner = "your-github-username"
-token = "your-github-pat"
-repo = "your-repo-name"
-posts-dir = "src/_posts"
+Run `zig-out/bin/blues --help` for options. By default, the command reads
+`config.edn` in the current directory. Use `-c PATH` to select another file.
+
+To check configuration and output without calling either service:
+
+```sh
+zig-out/bin/blues -c config.example.edn -B -G
 ```
 
-### Bluesky
+The [man page](man/man1/blues.1) describes the options and configuration.
 
-Create an app password:
+## Test
 
-1. navigate to Bluesky's [App Passwords][ap] page
-2. click or tap on 'Add App Password'
-3. add the generated password to `config.toml`
+Run the Wattle test files with a local Wattle executable:
 
-[ap]: https://bsky.app/settings/app-passwords
+```sh
+for file in test/*.wattle; do wattle "$file" || exit; done
+```
 
-### GitHub
-
-Create a fine-grained personal access token:
-
-1. log in to GitHub's [Personal Access Tokens][pat] page
-2. click or tap on 'Generate new token'
-3. ensure that read/write permissions for 'content' of the repository are selected
-4. add the generated token to `config.toml`
-
-[pat]: https://github.com/settings/personal-access-tokens
-
-## Using
-
-Run `blues --help` for usage information. The command-line arguments are
-explained in more detail in the [man page][].
-
-[man page]: man/man1/blues.1.predoc
+Run the tests from the project root, since `test/config.wattle` reads
+`config.example.edn`. The argument parser is vendored from Wattle's installed
+Gum library in `deps/gum/`, with its license. JSON support comes from Wattle
+itself.
 
 ## Bugs
 
-Found a bug? I'd love to know about it. The best way is to report your bug in
-the [Issues][] section on GitHub.
+Report issues in [GitHub Issues](https://github.com/pyrmont/blueshift/issues).
 
-[Issues]: https://github.com/pyrmont/blueshift/issues
+## License
 
-## Licence
-
-Blueshift is licensed under the MIT Licence. See [LICENSE][] for more details.
-
-[LICENSE]: https://github.com/pyrmont/blueshift/blob/master/LICENSE
+Blueshift is licensed under the MIT License. See [LICENSE](LICENSE).

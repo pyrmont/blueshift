@@ -1,0 +1,86 @@
+; Blueshift uses Gum's Argy-Bargy port for its CLI.
+(import ./archive)
+(import ./date)
+(import ../deps/gum/args)
+
+(def- cli-config
+  {:rules ["--config" {:kind :single
+                        :short "c"
+                        :default "config.edn"
+                        :proxy "path"
+                        :help "EDN config file."}
+           "--echo" {:kind :flag
+                       :short "e"
+                       :help "Print generated Markdown."}
+           "--ignore" {:kind :multi
+                         :short "i"
+                         :proxy "text"
+                         :help "Ignore posts containing text."}
+           "--limit" {:kind :single
+                        :short "l"
+                        :proxy "number"
+                        :help "Maximum posts to fetch."}
+           "--quiet" {:kind :flag
+                        :short "q"
+                        :help "Suppress progress output."}
+           "--since" {:kind :single
+                        :short "s"
+                        :proxy "date"
+                        :help "Fetch posts after date."}
+           "--update" {:kind :flag
+                         :short "u"
+                         :help "Set last-fetch to the current time."}
+           "--no-bluesky" {:kind :flag
+                             :short "B"
+                             :hide? true}
+           "--no-github" {:kind :flag
+                            :short "G"
+                            :hide? true}
+           "-------------------------------------------"]
+   :info {:about "Archive Bluesky posts to a GitHub repository as Markdown files."}})
+
+(defn- parse-date [input]
+  (def iso? (or (string/find "T" input)
+                (not (string/find " " input))))
+  (def has-time? (or (string/find "T" input)
+                     (string/find " " input)))
+  (def suffix (string/slice input (min 10 (length input))))
+  (def has-offset? (or (string/find "Z" suffix)
+                       (string/find "+" suffix)
+                       (string/find "-" suffix)))
+  (def normalized
+    (cond
+      (and has-time? has-offset?) input
+      has-time? (string input (unless iso? " ") (date/local-offset iso?))
+      (string input "T00:00" (date/local-offset true))))
+  (def parser (if iso? date/iso8601->epoch date/rfc2822ish->epoch))
+  (def [ok? epoch] (protect (parser normalized)))
+  (assertf ok? "unrecognised date '%s' used as value to --since" input)
+  epoch)
+
+(defn- parse-limit [input]
+  (def number (scan-number input))
+  (assertf (and number (pos? number)) "invalid limit: %s" input)
+  number)
+
+(defn main [script & args]
+  (def parsed (args/parse-args "blues" cli-config args))
+  (def help (get parsed :help))
+  (def err (get parsed :err))
+  (unless (empty? help)
+    (prin help)
+    (os/exit 0))
+  (unless (empty? err)
+    (eprin err)
+    (os/exit 1))
+  (def opts (get parsed :opts))
+  (archive/make
+    :config-file (get opts "config")
+    :since (when (get opts "since") (parse-date (get opts "since")))
+    :ignores (get opts "ignore")
+    :limit (when (get opts "limit") (parse-limit (get opts "limit")))
+    :echo? (get opts "echo")
+    :skip-bluesky? (get opts "no-bluesky")
+    :skip-github? (get opts "no-github")
+    :update? (get opts "update")
+    :quiet? (get opts "quiet")))

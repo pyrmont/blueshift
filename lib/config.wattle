@@ -1,0 +1,23 @@
+(import ./date)
+
+(defn- read-config [path]
+  (assertf (= :file (os/stat path :mode)) "file %s not found" path)
+  (def forms (parse-all (slurp path)))
+  (assert (= (length forms) 1) "config must contain one EDN map")
+  (def config (first forms))
+  (assert (dictionary? config) "config must be an EDN map")
+  config)
+
+(defn load [path]
+  "Read a Wattle EDN config, converting last-fetch to epoch seconds."
+  (def config (read-config path))
+  (def last-fetch (get config :last-fetch))
+  (if (string? last-fetch)
+    (assoc config :last-fetch (date/iso8601->epoch last-fetch))
+    config))
+
+(defn save-last-fetch [path value]
+  "Write last-fetch as an ISO 8601 string in the EDN config."
+  (def config (read-config path))
+  (def updated (assoc config :last-fetch value))
+  (spit path (string (string/format "%m" updated) "\n")))

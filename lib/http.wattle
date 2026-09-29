@@ -1,0 +1,16 @@
+(import blues_http)
+
+(defn request [method url & {:keys [headers body] :or {headers {}}}]
+  (def response (blues_http/request method url headers body))
+  (if (get response :error)
+    (error (get response :error))
+    response))
+
+(defn http-get [url & {:keys [headers]}]
+  (request "GET" url :headers (or headers {})))
+
+(defn http-post [url & {:keys [headers body]}]
+  (request "POST" url :headers (or headers {}) :body body))
+
+(defn http-put [url & {:keys [headers body]}]
+  (request "PUT" url :headers (or headers {}) :body body))

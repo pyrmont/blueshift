@@ -1,0 +1,25 @@
+(use ./support)
+
+(deftest encode-request-body
+  (def body (json/decode
+              (json/encode {:identifier "alice" :password "a\"b"} :s)))
+  (is (= "alice" (get body "identifier")))
+  (is (= "a\"b" (get body "password"))))
+
+(deftest decode-api-response
+  (def body (json/decode
+              "{\"feed\":[{\"post\":{\"uri\":\"at://example\"}}],\"cursor\":null,\"ok\":true}"
+              :n))
+  (is (= "at://example" (get-in body ["feed" 0 "post" "uri"])))
+  (is (not (has-key? body "cursor")))
+  (is (= true (get body "ok"))))
+
+(deftest decode-escaped-text
+  (is (= "first\nsecond" (json/decode "\"first\\nsecond\"")))
+  (is (= "😀" (json/decode "\"\\uD83D\\uDE00\""))))
+
+(deftest reject-invalid-json
+  (def [ok?] (protect (json/decode "{broken}")))
+  (is (not ok?)))
+
+(run-tests!)

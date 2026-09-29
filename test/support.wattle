@@ -1,0 +1,10 @@
+(var tests-run 0)
+
+(defmacro is [expression]
+  `(assert ~expression))
+
+(defmacro deftest [name & body]
+  `(do ~|body (++ tests-run)))
+
+(defn run-tests! []
+  (print tests-run " tests passed"))

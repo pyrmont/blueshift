@@ -1,0 +1,20 @@
+(use ./support)
+(import ../lib/config :as c)
+
+(deftest load-example
+  (def config (c/load "config.example.edn"))
+  (is (= "your-bluesky-handle" (get-in config [:bluesky :handle])))
+  (is (= "src/_posts" (get-in config [:github :posts-dir])))
+  (is (= "+0900" (get config :time-offset)))
+  (is (= false (get config :repost?))))
+
+(deftest save-and-load-last-fetch
+  (def path (string "/tmp/blueshift-wattle-config-" (os/getpid) ".edn"))
+  (spit path (slurp "config.example.edn"))
+  (c/save-last-fetch path "2024-01-15T12:30:45Z")
+  (def config (c/load path))
+  (is (= 1705321845 (get config :last-fetch)))
+  (is (= "your-bluesky-handle" (get-in config [:bluesky :handle])))
+  (os/rm path))
+
+(run-tests!)

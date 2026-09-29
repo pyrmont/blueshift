@@ -1,0 +1,20 @@
+; A small executable for exercising the native HTTP module and quickbin build.
+(import blues_http)
+(import ./bluesky)
+(import ./github)
+
+(defn main [script & args]
+  (when (empty? args)
+    (error "usage: blues-http-probe URL [METHOD [BODY [HEADER-NAME HEADER-VALUE]]]"))
+  (def url (get args 0))
+  (def method (get args 1 "GET"))
+  (def body (get args 2))
+  (def headers (if (get args 3)
+                 {(get args 3) (get args 4)}
+                 {}))
+  (def response (blues_http/request method url headers body))
+  (if (get response :error)
+    (error (get response :error))
+    (do
+      (print (get response :status))
+      (prin (get response :body)))))

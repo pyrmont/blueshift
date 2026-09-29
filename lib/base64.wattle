@@ -1,0 +1,34 @@
+(def- alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+
+(defn encode
+  "Encode a string or byte array as Base64."
+  [data]
+  (def bytes (if (string? data) (string/bytes data) data))
+  (def len (length bytes))
+  (def out !"")
+  (var i 0)
+  (while (< (+ i 2) len)
+    (def b1 (get bytes i))
+    (def b2 (get bytes (+ i 1)))
+    (def b3 (get bytes (+ i 2)))
+    (buffer/push! out
+      (get alphabet (brshift b1 2))
+      (get alphabet (bor (blshift (band b1 0x03) 4) (brshift b2 4)))
+      (get alphabet (bor (blshift (band b2 0x0f) 2) (brshift b3 6)))
+      (get alphabet (band b3 0x3f)))
+    (+= i 3))
+  (def remaining (- len i))
+  (when (> remaining 0)
+    (def b1 (get bytes i))
+    (buffer/push! out (get alphabet (brshift b1 2)))
+    (if (= remaining 1)
+      (buffer/push! out
+        (get alphabet (blshift (band b1 0x03) 4))
+        "==")
+      (do
+        (def b2 (get bytes (+ i 1)))
+        (buffer/push! out
+          (get alphabet (bor (blshift (band b1 0x03) 4) (brshift b2 4)))
+          (get alphabet (blshift (band b2 0x0f) 2))
+          "="))))
+  (string out))

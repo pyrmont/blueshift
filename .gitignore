@@ -1,7 +1,10 @@
-# Janet build artifacts
-_build/
+# Zig/Wattle build artifacts
+.zig-cache/
+zig-out/
 
 # Configuration and state files
+config.edn
+config.toml
 config.jdn
 
 # OS files

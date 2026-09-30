@@ -1,4 +1,4 @@
-(use ./support)
+(import ../deps/gum/test :prefix "")
 (import ../deps/gum/args :as argy)
 
 (def config

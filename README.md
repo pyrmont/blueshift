@@ -71,12 +71,12 @@ The [man page](man/man1/blues.1) describes the options and configuration.
 Run the Wattle test files with a local Wattle executable:
 
 ```sh
-for file in test/*.wattle; do wattle "$file" || exit; done
+wattle test
 ```
 
 Run the tests from the project root, since `test/config.wattle` reads
-`config.example.edn`. The argument parser is vendored from Wattle's installed
-Gum library in `deps/gum/`, with its license. JSON support comes from Wattle
+`config.example.edn`. The argument parser and the test framework are vendored from
+Wattle's Gum library in `deps/gum/`, with their licenses. JSON support comes from Wattle
 itself.
 
 ## Bugs

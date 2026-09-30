@@ -1,4 +1,4 @@
-(use ./support)
+(import ../deps/gum/test :prefix "")
 (import ../lib/config :as c)
 
 (deftest load-example

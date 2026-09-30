@@ -36,10 +36,7 @@ jobs:
         run: ../wattle/zig-out/bin/wattle -s ../wattle/zig-out build exe
         working-directory: blueshift
       - name: Run Wattle tests
-        run: |
-          for file in test/*.wattle; do
-            ../wattle/zig-out/bin/wattle "$file" || exit
-          done
+        run: ../wattle/zig-out/bin/wattle test
         working-directory: blueshift
       - name: Check CLI
         run: |

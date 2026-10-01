@@ -6,29 +6,13 @@
 (def- default-pad-right 0)
 (def- default-hr "---")
 
+; Returns the columns of the terminal standard output is open on, capped at
+; max-width, or max-width when standard output is not a terminal. A build with
+; -Dreduced-os=true does not register os/term-size, so the call is compiled
+; only where the binding exists.
 (defn- get-cols [max-width]
-  (if (not (os/isatty))
-    max-width
-    (with [output (file/temp)]
-      (with [errors (file/temp)]
-        (def windows? (= :windows (os/which)))
-        (def command
-          (if windows?
-            ["powershell" "-command" "&{(get-host).ui.rawui.WindowSize.Width;}"]
-            ["stty" "size"]))
-        (def [ok? status]
-          (protect (os/execute command :p {:out output :err errors})))
-        (if (and ok? (= status 0))
-          (do
-            (file/seek output :set)
-            (def response (string/trim (file/read output :all)))
-            (def width
-              (scan-number
-                (if windows?
-                  response
-                  (get (string/split " " response) 1))))
-            (if width (min width max-width) max-width))
-          max-width)))))
+  (def size (compif (dyn 'os/term-size) (os/term-size) nil))
+  (if size (min (get size 0) max-width) max-width))
 
 (defn- rule-pairs [entries hr]
   (def out ![])
@@ -49,24 +33,9 @@
 (defn- long-name [name]
   (if (string/has-prefix? "--" name) (string/slice name 2) name))
 
-(defn- conform-args [argv]
-  (def out ![])
-  (var literal? false)
-  (each arg argv
-    (cond
-      literal?
-        (array/push! out arg)
-      (= arg "--")
-        (do
-          (array/push! out arg)
-          (set literal? true))
-      (and (string/has-prefix? "--" arg) (string/find "=" arg))
-        (do
-          (def equal (string/find "=" arg))
-          (array/push! out (string/slice arg 0 equal))
-          (array/push! out (string/slice arg (+ equal 1))))
-      (array/push! out arg)))
-  out)
+; A rest parameter captures every remaining token, so it is also a splat.
+(defn- splat? [rule]
+  (or (get rule :splat?) (get rule :rest?)))
 
 (defn- alnum-byte? [b]
   (and b
@@ -88,7 +57,8 @@
          ok?)))
 
 (defn- validate-config [rules subs]
-  (var splat? false)
+  (var splat-seen? false)
+  (var rest? false)
   (def shorts !{})
   (each [name rule] rules
     (when rule
@@ -121,10 +91,14 @@
         (assertf (= 0 (length subs))
                  "parameter rules cannot be combined with subcommands: %p"
                  rule)
-        (when (get rule :splat?)
-          (assertf (not splat?)
+        (assertf (not rest?)
+                 "no parameter rule can follow one with :rest?: %p" rule)
+        (when (splat? rule)
+          (assertf (not splat-seen?)
                    "multiple parameter rules cannot capture :splat?: %p" rule)
-          (set splat? true)))))
+          (set splat-seen? true))
+        (when (get rule :rest?)
+          (set rest? true)))))
   (each [name sub] subs
     (when sub
       (assertf (string? name) "name of subcommands must be strings: %p" name)
@@ -216,26 +190,52 @@
 (defn- wrap-line [input limit hang]
   (string/join "\n" (wrap-words input limit 0 "" hang)))
 
+; Returns the lines of rows, each a [prefix description] pair, with the
+; descriptions in a column that starts pad-inset columns after the longest
+; prefix and wraps before cols less pad-right. A row with a nil prefix is a
+; blank line.
+(defn- column-lines [rows cols pad-inset pad-right]
+  (var width 0)
+  (each [prefix _] rows
+    (when prefix
+      (set width (max width (+ pad-inset (length prefix))))))
+  (def lines ![])
+  (each [prefix description] rows
+    (if prefix
+      (do
+        (def line-start (string prefix
+                          (string/repeat " " (- width (length prefix)))))
+        (def limit (- cols pad-right))
+        (each line (wrap-words description limit width line-start width)
+          (array/push! lines line)))
+      (array/push! lines "")))
+  lines)
+
 (defn- emit-rows [lines heading rows cols pad-inset pad-right]
   (when (> (length rows) 0)
-    (var width 0)
-    (each [prefix _] rows
-      (when prefix
-        (set width (max width (+ pad-inset (length prefix))))))
     (array/push! lines "")
     (array/push! lines heading)
     (array/push! lines "")
-    (each [prefix description] rows
-      (if prefix
-        (do
-          (def line-start (string prefix
-                            (string/repeat " " (- width (length prefix)))))
-          (def limit (- cols pad-right))
-          (each line (wrap-words description limit width line-start width)
-            (array/push! lines line)))
-        (array/push! lines "")))))
+    (each line (column-lines rows cols pad-inset pad-right)
+      (array/push! lines line))))
 
-(defn- usage [command config]
+(defn format-columns
+  """
+  Formats rows, a sequence of [name description] pairs, as two columns in the
+  layout of the usage text. Each name is indented by one space. The
+  descriptions start in one column, four columns after the longest name, and
+  wrap at the width of the terminal standard output is open on, up to
+  max-width, which is 120 columns by default. Returns the lines joined by
+  newlines, with none at the end.
+  """
+  ([rows] (format-columns rows default-max-width))
+  ([rows max-width]
+    (def cols (get-cols max-width))
+    (string/join "\n"
+      (column-lines (map (fn [[name description]] [(string " " name) description]) rows)
+                    cols default-pad-inset default-pad-right))))
+
+(defn- usage [command config root]
   (def info (get config :info {}))
   (def hr (get info :hr default-hr))
   (def pad-inset (get info :pad-inset default-pad-inset))
@@ -264,17 +264,22 @@
           (set example
             (string example " " (unless (get rule :req?) "[")
                     "<" (get rule :proxy (string name))
-                    (when (get rule :splat?) "...") ">"
+                    (when (splat? rule) "...") ">"
                     (unless (get rule :req?) "]")))))
       (when (> (length subs) 0)
-        (set example (string example " <subcommand> [<args>]")))
+        (set example
+          (string example
+                  (if (get config :implicit)
+                    " [<subcommand>] [<args>]"
+                    " <subcommand> [<args>]"))))
       (array/push! lines
         (wrap-line example (- cols pad-right)
                    (+ 8 (length command))))))
-  (when (get info :about)
+  (def about (or (get info :about) (get config :help)))
+  (when about
     (array/push! lines "")
     (array/push! lines
-      (wrap-line (get info :about) (- cols pad-right) 0)))
+      (wrap-line about (- cols pad-right) 0)))
   (def parameter-rows ![])
   (def option-rows ![])
   (def sub-rows ![])
@@ -317,10 +322,20 @@
         (array/push! sub-rows [nil nil])))
     (emit-rows lines (get info :subs-header "Subcommands:") sub-rows
                cols pad-inset pad-right)
+    (when (get config :implicit)
+      (array/push! lines "")
+      (array/push! lines
+        (wrap-line (string "Without a subcommand, '" (get config :implicit)
+                           "' is assumed.")
+                   (- cols pad-right) 0)))
     (array/push! lines "")
     (array/push! lines
       (string "For more information on each subcommand, type '"
-              command " help <subcommand>'.")))
+              root " help "
+              (if (= command root)
+                ""
+                (string (string/slice command (+ (length root) 1)) " "))
+              "<subcommand>'.")))
   (when (get info :rider)
     (array/push! lines "")
     (array/push! lines
@@ -365,7 +380,7 @@
   (var j 0)
   (while (and (< j (length specs)) (empty? (get result :err)))
     (def [name rule] (get specs j))
-    (if (get rule :splat?)
+    (if (splat? rule)
       (do
         (def take-count (max 0 (- (length inputs) i (- (length specs) j 1))))
         (def collected ![])
@@ -414,31 +429,54 @@
       (set found [name sub])))
   found)
 
-(defn parse-args [command config argv]
-  """
-  Parses argv with Argy-Bargy rules. The argv vector excludes the script name.
-  The config map accepts alternating name/rule entries in :rules and optional
-  subcommand entries in :subs. Option rules use :flag, :count, :single,
-  :multi, or :help as :kind; parameters use keyword names. Rules may set
-  :short, :value, :default, :help, :hide?, :proxy, :req?, or :splat?.
-  Returns :cmd, :opts, :params or :sub, :err, and :help.
-  """
+(defn- parse-with-root [command config argv root]
   (def info (get config :info {}))
   (def hr (get info :hr default-hr))
   (def rules (rule-pairs (get config :rules []) hr))
   (def subs (rule-pairs (get config :subs []) hr))
-  (validate-config rules subs)
-  (def args (conform-args argv))
+  (when (get config :validate? true)
+    (validate-config rules subs)
+    (when (get config :implicit)
+      (assertf (find-sub subs (get config :implicit))
+               ":implicit must name a subcommand: %p"
+               (get config :implicit))))
+  (def implicit-sub
+    (when (get config :implicit) (find-sub subs (get config :implicit))))
+  (def args (array/slice argv))
+  (def rest-at
+    (do
+      (var found nil)
+      (var before 0)
+      (each [name rule] rules
+        (when (and rule (keyword? name))
+          (when (get rule :rest?) (set found before))
+          (++ before)))
+      found))
   (def result !{:cmd command :opts !{} :params !{} :err "" :help ""})
   (when (> (length subs) 0)
     (put! result :params nil))
   (def positionals ![])
   (var i 0)
   (var done? false)
+  ; Parses sub-args as the arguments of subcommand name and records the
+  ; outcome in result. A subcommand with :subs is parsed in turn.
+  (defn enter! [name sub sub-args]
+    (if (or (get sub :rules) (get sub :subs))
+      (do
+        (def child (parse-with-root (string command " " name) sub sub-args root))
+        (put! child :cmd name)
+        (put! result :sub child)
+        (put! result :err (get child :err))
+        (put! result :help (get child :help)))
+      (put! result :sub {:cmd name :args sub-args}))
+    (set done? true))
   (while (and (< i (length args)) (not done?)
               (empty? (get result :err)) (empty? (get result :help)))
     (def arg (get args i))
     (cond
+      (and (= arg "--") implicit-sub)
+        (enter! (get implicit-sub 0) (get implicit-sub 1)
+                (array/slice args i))
       (= arg "--")
         (do
           (++ i)
@@ -446,9 +484,21 @@
             (array/push! positionals (get args i))
             (++ i))
           (set done? true))
+      (and implicit-sub (string/has-prefix? "--" arg)
+           (not (lookup-option rules
+                  (string/slice arg 2 (or (string/find "=" arg) (length arg)))
+                  false)))
+        (enter! (get implicit-sub 0) (get implicit-sub 1)
+                (array/slice args i))
       (string/has-prefix? "--" arg)
         (do
-          (def name (string/slice arg 2))
+          ; A --name=value token is split in place when it is reached, so
+          ; the tokens a rest parameter captures are left as they were given.
+          (def equal (string/find "=" arg))
+          (when equal
+            (put! args i (string/slice arg 0 equal))
+            (array/insert! args (+ i 1) (string/slice arg (+ equal 1))))
+          (def name (string/slice (get args i) 2))
           (def found (lookup-option rules name false))
           (def rule (when found (get found 1)))
           (def takes? (and rule (or (= :single (get rule :kind))
@@ -460,8 +510,12 @@
             (set i next-i))
           (apply-option result rules name false value)
           (when (and found (= :help (get rule :kind)))
-            (put! result :help (usage command config))
+            (put! result :help (usage command config root))
             (set done? true)))
+      (and implicit-sub (string/has-prefix? "-" arg) (not (= arg "-"))
+           (not (lookup-option rules (string/slice arg 1 2) true)))
+        (enter! (get implicit-sub 0) (get implicit-sub 1)
+                (array/slice args i))
       (and (string/has-prefix? "-" arg) (not (= arg "-")))
         (do
           ; A short cluster like -xyz may be bundled flags, a bundled flag
@@ -490,37 +544,58 @@
               (do
                 (apply-option result rules char true nil)
                 (when (and found (= :help (get rule :kind)))
-                  (put! result :help (usage command config))
+                  (put! result :help (usage command config root))
                   (set done? true))
                 (++ p)))))
       (> (length subs) 0)
         (do
-          (def literal-help? (and (= arg "help") (not (find-sub subs "help"))))
+          (def literal-help? (and (or (= arg "help") (= arg "h"))
+                                  (not (find-sub subs arg))))
           (def wanted (if literal-help? (get args (+ i 1)) arg))
           (def found (when wanted (find-sub subs wanted)))
-          (if found
-            (do
-              (def [name sub] found)
-              (if literal-help?
-                (do
-                  (put! (get result :opts) "help" true)
-                  (put! result :sub {:cmd name})
-                  (put! result :help (usage (string command " " name) sub)))
-                (if (get sub :rules)
-                  (do
-                    (def child (parse-args (string command " " name) sub
-                                 (array/slice args (+ i 1))))
-                    (put! child :cmd name)
-                    (put! result :sub child)
-                    (put! result :err (get child :err))
-                    (put! result :help (get child :help)))
-                  (put! result :sub
-                    {:cmd name :args (array/slice args (+ i 1))})))
-              (set done? true))
+          (cond
+            (and found literal-help?)
+              (do
+                (def name (get found 0))
+                (var target (get found 1))
+                (var target-cmd (string command " " name))
+                (var j (+ i 2))
+                (def steps ![name])
+                (while (and (empty? (get result :err))
+                            (get target :subs) (get args j))
+                  (def inner (find-sub (rule-pairs (get target :subs) hr)
+                                       (get args j)))
+                  (if inner
+                    (do
+                      (def [inner-name inner-sub] inner)
+                      (set target inner-sub)
+                      (set target-cmd (string target-cmd " " inner-name))
+                      (array/push! steps inner-name)
+                      (++ j))
+                    (put! result :err
+                      (string "unrecognized subcommand '" (get args j) "'"))))
+                (put! (get result :opts) "help" true)
+                (put! result :sub {:cmd name :path steps})
+                (when (empty? (get result :err))
+                  (put! result :help (usage target-cmd target root)))
+                (set done? true))
+            found
+              (do
+                (def [name sub] found)
+                (enter! name sub (array/slice args (+ i 1))))
+            (and implicit-sub (not literal-help?))
+              (enter! (get implicit-sub 0) (get implicit-sub 1)
+                      (array/slice args i))
             (put! result :err
               (if wanted
                 (string "unrecognized subcommand '" wanted "'")
                 "no subcommand specified after 'help'"))))
+      (and rest-at (= (length positionals) rest-at))
+        (do
+          (while (< i (length args))
+            (array/push! positionals (get args i))
+            (++ i))
+          (set done? true))
       (array/push! positionals arg))
     (++ i))
   (when (and (empty? (get result :err)) (empty? (get result :help)))
@@ -532,10 +607,37 @@
               (if (= :multi (get rule :kind)) (array/slice value) value))))
     (when (not (get result :sub))
       (if (> (length subs) 0)
-        (put! result :err "no subcommand provided")
+        (if implicit-sub
+          (enter! (get implicit-sub 0) (get implicit-sub 1) [])
+          (put! result :err "no subcommand provided"))
         (apply-params result rules positionals))))
   (when (and (not (get result :sub)) (not (empty? (get result :err))))
     (put! result :err
       (string command ": " (get result :err) "\n"
               "Try '" command " --help' for more information.\n")))
   result)
+
+(defn parse-args
+  """
+  Parses argv with Argy-Bargy rules. The argv vector excludes the script name.
+  The config map accepts alternating name/rule entries in :rules and optional
+  subcommand entries in :subs. Option rules use :flag, :count, :single,
+  :multi, or :help as :kind; parameters use keyword names. Rules may set
+  :short, :value, :default, :help, :hide?, :proxy, :req?, :splat?, or :rest?.
+  Setting :validate? to false in the config skips the check of the rules
+  and subcommands, which a caller with a fixed config can do once itself.
+  A parameter with :rest? is a splat that must come last. It captures its
+  first token and every token after it as given, options included, and
+  parsing of options stops there.
+  A subcommand's :help also describes it in its own usage text, unless its
+  :info sets :about.
+  A config with :subs may set :implicit to the name of one of them. Where
+  the parser would otherwise stop with an unrecognized subcommand or option,
+  or with no subcommand, it enters that subcommand instead, with the tokens
+  from that point as its arguments. Options the config itself declares are
+  read first. A subcommand with :subs is parsed in the same way as the root,
+  and `help` followed by subcommand names describes the last name given.
+  Returns :cmd, :opts, :params or :sub, :err, and :help.
+  """
+  [command config argv]
+  (parse-with-root command config argv command))

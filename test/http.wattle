@@ -1,0 +1,88 @@
+(import ../deps/gum/test :prefix "")
+
+; These tests load the native HTTP module from the shared library that
+; `wattle build lib` writes, so build it first and run from the project root.
+; The module is registered under the name `blues_http`, which is what
+; `lib/http.wattle` imports.
+(def native
+  (let [[ok? result] (protect (require "../zig-out/lib/libblues_http"))]
+    (unless ok?
+      (error (string "cannot load the native HTTP module (run `wattle build lib` "
+                     "from the project root): " result)))
+    result))
+(module/add-native "blues_http" native)
+
+(import ../lib/http :as http)
+(import blues_http :as raw)
+
+(defn- serve
+  """
+  Starts a server on a free local port that answers every request with `status`
+  and `body`. Returns [server url seen], where `seen` holds the raw request as
+  `:request`.
+  """
+  [status body]
+  (def seen !{})
+  (defn handle [conn]
+    (put! seen :request (string (net/read conn 4096)))
+    (net/write conn (string "HTTP/1.1 " status "\r\n"
+                            "Content-Type: text/plain\r\n"
+                            "Content-Length: " (length body) "\r\n"
+                            "Connection: close\r\n\r\n"
+                            body))
+    (net/close conn))
+  (def server (net/server "127.0.0.1" "0" handle))
+  (def port (get (net/localname server) 1))
+  [server (string "http://127.0.0.1:" port "/path") seen])
+
+(deftest get-returns-status-and-body
+  (def [server url _] (serve "200 OK" "hello"))
+  (def response (http/http-get url))
+  (net/close server)
+  (is (= 200 (get response :status)))
+  (is (= "hello" (get response :body))))
+
+(deftest get-sends-method-path-and-headers
+  (def [server url seen] (serve "200 OK" "ok"))
+  (http/http-get url :headers {"X-Test" "1"})
+  (net/close server)
+  (def request (get seen :request))
+  (is (string/has-prefix? "GET /path HTTP/1.1" request))
+  (is (string/find "X-Test: 1" request)))
+
+(deftest post-sends-body
+  (def [server url seen] (serve "201 Created" "made"))
+  (def response (http/http-post url :body "payload"))
+  (net/close server)
+  (def request (get seen :request))
+  (is (= 201 (get response :status)))
+  (is (string/has-prefix? "POST /path HTTP/1.1" request))
+  (is (string/has-suffix? "payload" request)))
+
+(deftest put-sends-body
+  (def [server url seen] (serve "200 OK" "updated"))
+  (def response (http/http-put url :body "new-contents"))
+  (net/close server)
+  (def request (get seen :request))
+  (is (= "updated" (get response :body)))
+  (is (string/has-prefix? "PUT /path HTTP/1.1" request))
+  (is (string/has-suffix? "new-contents" request)))
+
+(deftest error-status-is-a-response-not-an-error
+  (def [server url _] (serve "404 Not Found" "missing"))
+  (def response (http/http-get url))
+  (net/close server)
+  (is (= 404 (get response :status)))
+  (is (= "missing" (get response :body))))
+
+(deftest connection-failure-raises-in-the-wrapper
+  ; Port 1 is reserved and nothing listens on it.
+  (def [ok? message] (protect (http/http-get "http://127.0.0.1:1/")))
+  (is (not ok?))
+  (is (= "ConnectionRefused" message)))
+
+(deftest connection-failure-is-a-map-in-the-native-module
+  (def response (raw/request "GET" "http://127.0.0.1:1/" {} nil))
+  (is (= "ConnectionRefused" (get response :error))))
+
+(run-tests!)

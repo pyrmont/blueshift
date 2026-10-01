@@ -33,7 +33,10 @@ jobs:
         run: zig build
         working-directory: wattle
       - name: Build Blueshift
-        run: ../wattle/zig-out/bin/wattle -s ../wattle/zig-out build exe
+        run: ../wattle/zig-out/bin/wattle -p ../wattle/zig-out build exe
+        working-directory: blueshift
+      - name: Build native module
+        run: ../wattle/zig-out/bin/wattle -p ../wattle/zig-out build lib
         working-directory: blueshift
       - name: Run Wattle tests
         run: ../wattle/zig-out/bin/wattle test

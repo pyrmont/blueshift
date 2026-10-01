@@ -45,7 +45,7 @@ jobs:
         run: zig build
         working-directory: wattle
       - name: Build Blueshift
-        run: ../wattle/zig-out/bin/wattle -s ../wattle/zig-out build exe --release fast
+        run: ../wattle/zig-out/bin/wattle -p ../wattle/zig-out build exe --release fast
         working-directory: blueshift
       - name: Package Blueshift
         run: |

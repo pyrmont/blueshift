@@ -1,6 +1,9 @@
 # Blueshift
 
-[![Test Status](https://github.com/pyrmont/blueshift/workflows/test/badge.svg)](https://github.com/pyrmont/blueshift/actions?query=workflow%3Atest)
+[![Test Status][icon]][status]
+
+[icon]: https://github.com/pyrmont/blueshift/actions/workflows/test.yml/badge.svg
+[status]: https://github.com/pyrmont/blueshift/actions?query=workflow%3ATest
 
 Blueshift provides `blues`, a Wattle command-line utility that archives Bluesky
 posts to a GitHub repository as Markdown files.

@@ -7,15 +7,15 @@ posts to a GitHub repository as Markdown files.
 
 ## Build
 
-Building requires Zig 0.16.0 and Wattle, installed with its `share/wattle`
+Building requires Zig 0.16.0 and Wattle, installed with its `<prefix>/share/wattle`
 package (for example, by running `zig build -p ~/.local` in a Wattle checkout).
-The build is declared in `info.edn`, so no `build.zig` is needed. `-s` gives
-the Wattle install prefix, or set `WATTLE_PATH` instead:
+The build is declared in `info.edn`, so no `build.zig` is needed. `-p` gives
+the Wattle install prefix, or set `WATTLE_PREFIX` instead:
 
 ```sh
 git clone https://github.com/pyrmont/blueshift.git
 cd blueshift
-wattle -s ~/.local build exe --release fast
+wattle -p ~/.local build exe --release fast
 ```
 
 The executable is `zig-out/bin/blues`. It includes the native HTTP transport

@@ -1,5 +1,4 @@
-; Command-line argument parser ported from Argy-Bargy for Janet.
-; The original is MIT licensed; see LICENSE.argy-bargy.
+; An argument parsing library
 
 (def- default-max-width 120)
 (def- default-pad-inset 4)

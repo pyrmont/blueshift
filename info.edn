@@ -1,6 +1,6 @@
 {:name "blueshift"
  :group "net.inqk"
- :version "0.1.0"
+ :version "DEVEL"
  :description "A command-line utility to archive Bluesky posts to GitHub"
  :author "Michael Camilleri"
  :license "MIT"

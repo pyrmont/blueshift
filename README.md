@@ -1,33 +1,88 @@
 # Blueshift
 
-[![Test Status][icon]][status]
+[![Latest Release](https://img.shields.io/github/v/release/pyrmont/blueshift)](https://github.com/pyrmont/blueshift/releases/latest)
+[![Test Status](https://github.com/pyrmont/blueshift/workflows/test/badge.svg)](https://github.com/pyrmont/blueshift/actions?query=workflow%3Atest)
 
-[icon]: https://github.com/pyrmont/blueshift/actions/workflows/test.yml/badge.svg
-[status]: https://github.com/pyrmont/blueshift/actions?query=workflow%3ATest
-
-Blueshift provides `blues`, a Wattle command-line utility that archives Bluesky
+Blueshift provides `blues`, a command-line utility to archive your Bluesky
 posts to a GitHub repository as Markdown files.
 
-## Build
+```
+Usage: blues [--config <path>] [--echo] [--ignore <text>] [--limit <number>]
+             [--quiet] [--since <date>] [--update]
 
-Building requires Zig 0.17.1 and Wattle, installed with its `<prefix>/share/wattle`
-package (for example, by running `zig build -p ~/.local` in a Wattle checkout).
-The build is declared in `info.edn`, so no `build.zig` is needed. `-p` gives
-the Wattle install prefix, or set `WATTLE_PREFIX` instead:
+Archive Bluesky posts to a GitHub repository as Markdown files.
 
-```sh
-git clone https://github.com/pyrmont/blueshift.git
-cd blueshift
-wattle -p ~/.local build exe --release fast
+Options:
+
+ -c, --config <path>     EDN config file. (Default: config.edn)
+ -e, --echo              Print generated Markdown.
+ -i, --ignore <text>     Ignore posts containing text.
+ -l, --limit <number>    Maximum posts to fetch.
+ -q, --quiet             Suppress progress output.
+ -s, --since <date>      Fetch posts after date.
+ -u, --update            Set last-fetch to the current time.
+ -v, --version           Show version information.
+
+ -h, --help              Show this help message.
 ```
 
-The executable is `zig-out/bin/blues`. It includes the native HTTP transport
-and does not require a separate Wattle installation at runtime.
+## Installing
 
-## Configure
+### Homebrew
 
-Copy `config.example.edn` to `config.edn` and replace the example Bluesky
-app password and GitHub token. `config.edn` is ignored by Git.
+The latest release of `blues` is available via Homebrew for macOS (Apple
+Silicon) and Linux (x86-64 and aarch64):
+
+```
+$ brew tap pyrmont/blueshift https://github.com/pyrmont/blueshift
+$ brew install blues
+```
+
+### Pre-Built
+
+Pre-built binaries of `blues` are available as tarballs via the
+[Releases][github-releases] section on GitHub for:
+
+- Linux (x86-64 and aarch64)
+- macOS (aarch64)
+
+[github-releases]: https://github.com/pyrmont/blueshift/releases
+
+```shell
+$ curl -LO https://github.com/pyrmont/blueshift/releases/latest/download/blueshift-v<version>-<platform>-<arch>.tar.gz
+$ tar -xzf blueshift-v<version>-<platform>-<arch>.tar.gz
+$ cd blueshift-v<version>
+# use sudo or doas depending on the permissions of the target directories
+$ sudo cp blues /usr/local/bin/ # or somewhere else on your PATH
+$ sudo cp blues.1 /usr/local/share/man/man1/ # or somewhere else on your MANPATH
+```
+
+### From Source
+
+Blueshift is written in [Wattle][]. To build the `blues` binary from source,
+you need Zig 0.17.1 and Wattle, installed with its `<prefix>/share/wattle`
+package (for example, by running `zig build -p ~/.local` in a Wattle checkout).
+`-p` gives the Wattle install prefix, or set `WATTLE_PREFIX` instead:
+
+[Wattle]: https://github.com/pyrmont/wattle
+
+```shell
+$ git clone https://github.com/pyrmont/blueshift
+$ cd blueshift
+$ git tag --sort=creatordate
+$ git checkout <version> # check out the latest tagged version
+$ wattle -p ~/.local build exe --release fast
+```
+
+The executable is `zig-out/bin/blues`. It includes the Wattle runtime and does
+not require Wattle or any other program at runtime.
+
+## Configuring
+
+Blueshift looks for your credentials for Bluesky and GitHub in the
+configuration file. By default, this is `config.edn` in the current working
+directory. Copy `config.example.edn` to `config.edn` and replace the example
+values:
 
 ```clojure
 {:ignore ["#private" "#draft"]
@@ -56,36 +111,50 @@ fine-grained GitHub tokens can be created in [GitHub settings][github-tokens].
 [app-passwords]: https://bsky.app/settings/app-passwords
 [github-tokens]: https://github.com/settings/personal-access-tokens
 
-## Use
+## Using
 
-Run `zig-out/bin/blues --help` for options. By default, the command reads
-`config.edn` in the current directory. Use `-c PATH` to select another file.
+Run `blues --help` for usage information. The command-line arguments and the
+configuration file are explained in more detail in the [man page][].
 
-To check configuration and output without calling either service:
+[man page]: https://github.com/pyrmont/blueshift/blob/master/man/man1/blues.1
 
-```sh
-zig-out/bin/blues -c config.example.edn -B -G
+To check the configuration and output without calling either service:
+
+```shell
+$ blues -c config.example.edn --no-bluesky --no-github
 ```
 
-The [man page](man/man1/blues.1) describes the options and configuration.
+## Testing
 
-## Test
+Build the executable and the native HTTP module, then run the tests from the
+project root:
 
-Run the Wattle test files with a local Wattle executable:
-
-```sh
-wattle test
+```shell
+$ wattle build exe
+$ wattle build lib
+$ wattle test
 ```
 
-Run the tests from the project root, since `test/config.wattle` reads
-`config.example.edn`. The argument parser and the test framework are vendored from
-Wattle's Gum library in `deps/gum/`, with their licenses. JSON support comes from Wattle
-itself.
+The argument parser and the test framework are vendored from Wattle's Gum
+library in `deps/gum/`, with their licences.
+
+## Versioning
+
+Blueshift uses the label `DEVEL` during development. When a new version is
+released, a tag is created for that version in the repository. The changes in
+each release are listed in [CHANGELOG.md][changelog].
+
+[changelog]: https://github.com/pyrmont/blueshift/blob/master/CHANGELOG.md
 
 ## Bugs
 
-Report issues in [GitHub Issues](https://github.com/pyrmont/blueshift/issues).
+Found a bug? I'd love to know about it. The best way is to report your bug in
+the [Issues][] section on GitHub.
 
-## License
+[Issues]: https://github.com/pyrmont/blueshift/issues
 
-Blueshift is licensed under the MIT License. See [LICENSE](LICENSE).
+## Licence
+
+Blueshift is licensed under the MIT Licence. See [LICENSE][] for more details.
+
+[LICENSE]: https://github.com/pyrmont/blueshift/blob/master/LICENSE

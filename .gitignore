@@ -1,6 +1,7 @@
 # Zig/Wattle build artifacts
 .zig-cache/
 zig-out/
+.wattle/
 
 # Configuration and state files
 config.edn

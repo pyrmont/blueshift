@@ -2,6 +2,7 @@
 (import ./archive)
 (import ./date)
 (import ../deps/gum/args)
+(import ./version)
 
 (def- cli-config
   {:rules ["--config" {:kind :single
@@ -30,6 +31,10 @@
            "--update" {:kind :flag
                          :short "u"
                          :help "Set last-fetch to the current time."}
+           "--version" {:kind :flag
+                         :short "v"
+                         :noex? true
+                         :help "Show version information."}
            "--no-bluesky" {:kind :flag
                              :short "B"
                              :hide? true}
@@ -69,6 +74,9 @@
   (def err (get parsed :err))
   (unless (empty? help)
     (prin help)
+    (os/exit 0))
+  (when (get-in parsed [:opts "version"])
+    (print version/value)
     (os/exit 0))
   (unless (empty? err)
     (eprin err)

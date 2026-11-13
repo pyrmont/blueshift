@@ -1,8 +1,10 @@
 {:name "blueshift"
- :exes [{:type :native
-         :name "blues"
-         :entry "lib/cli.wattle"}]
- :libs [{:type :native
-         :name "blues_http"
-         :root "src/http.zig"
-         :for ["blues"]}]}
+ :group "net.inqk"
+ :version "DEVEL"
+ :description "A command-line utility to archive Bluesky posts to GitHub"
+ :author "Michael Camilleri"
+ :license "MIT"
+ :url "https://github.com/pyrmont/blueshift"
+ :exes [{:type :native :name "blues" :entry "lib/cli.wattle"}]
+ :libs [{:type :native :name "blues_http" :root "src/http.zig" :for ["blues"]}]
+ :docs [{:type :man :files ["man/man1/blues.1"] :for ["blues"]}]}

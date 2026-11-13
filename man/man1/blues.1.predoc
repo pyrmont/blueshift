@@ -20,6 +20,8 @@ SYNOPSIS
           **--no-github**] [**-q** | **--quiet**] [**-s** _date_ |
           **--since** _date_] [**-u** | **--update**]
 
+**blues** [**-v** | **--version**]
+
 **blues** [**-h** | **--help**]
 
 DESCRIPTION
@@ -79,6 +81,9 @@ Options
   creation time of the most recent post. When this option is used, the
   timestamp is set to the current time. This option is useful when you want to
   update the timestamp without uploading posts.
+
+- **-v** | **--version**:
+  Print the version and exit.
 
 - **-h** | **--help**:
   Print usage information and exit.

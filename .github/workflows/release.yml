@@ -17,14 +17,11 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            platform: macos
-            arch: aarch64
+            target: macos-aarch64
           - os: ubuntu-24.04-arm
-            platform: linux
-            arch: aarch64
+            target: linux-aarch64
           - os: ubuntu-latest
-            platform: linux
-            arch: x86_64
+            target: linux-x86_64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out Blueshift
@@ -44,26 +41,57 @@ jobs:
       - name: Build Wattle
         run: zig build
         working-directory: wattle
+      - name: Build native module
+        run: ../wattle/zig-out/bin/wattle -p ../wattle/zig-out build lib
+        working-directory: blueshift
       - name: Build Blueshift
         run: ../wattle/zig-out/bin/wattle -p ../wattle/zig-out build exe --release fast
+        working-directory: blueshift
+      - name: Run Wattle tests
+        run: ../wattle/zig-out/bin/wattle test
         working-directory: blueshift
       - name: Package Blueshift
         run: |
           package="blueshift-${{ inputs.version }}"
           mkdir "$package"
-          cp zig-out/bin/blues man/man1/blues.1 LICENSE README.md "$package/"
-          tar -czf "${package}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz" "$package"
+          cp zig-out/bin/blues man/man1/blues.1 LICENSE README.md CHANGELOG.md "$package/"
+          tar -czf "${package}-${{ matrix.target }}.tar.gz" "$package"
         working-directory: blueshift
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.platform }}-${{ matrix.arch }}
-          path: blueshift/blueshift-${{ inputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz
+          name: build-${{ matrix.target }}
+          path: blueshift/blueshift-${{ inputs.version }}-${{ matrix.target }}.tar.gz
 
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+      # The release's notes are its section of CHANGELOG.md: the lines after
+      # its heading and before the next. The changelog is wrapped to 80
+      # columns, but GitHub keeps the line breaks in the notes of a release,
+      # so each wrapped entry is joined onto a single line.
+      - name: Extract the notes
+        run: |
+          set -eu
+          version="${{ inputs.version }}"
+          awk -v heading="## ${version#v} " '
+            index($0, heading) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md | awk '
+            /^ +[^ ]/ { sub(/^ +/, ""); line = line " " $0; next }
+            { if (started) print line; line = $0; started = 1 }
+            END { if (started) print line }
+          ' > notes.md
+          if [ ! -s notes.md ]; then
+            echo "CHANGELOG.md has no section for ${version#v}"
+            exit 1
+          fi
       - name: Download artifacts
         uses: actions/download-artifact@v5
         with:
@@ -73,6 +101,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          body_path: notes.md
           files: ./artifacts/*
           overwrite_files: false
           tag_name: ${{ inputs.version }}

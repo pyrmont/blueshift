@@ -41,8 +41,3 @@ jobs:
       - name: Run Wattle tests
         run: ../wattle/zig-out/bin/wattle test
         working-directory: blueshift
-      - name: Check CLI
-        run: |
-          zig-out/bin/blues --help
-          zig-out/bin/blues -c config.example.edn -B -G
-        working-directory: blueshift

@@ -81,14 +81,19 @@
   (unless (empty? err)
     (eprin err)
     (os/exit 1))
-  (def opts (get parsed :opts))
-  (archive/make
-    :config-file (get opts "config")
-    :since (when (get opts "since") (parse-date (get opts "since")))
-    :ignores (get opts "ignore")
-    :limit (when (get opts "limit") (parse-limit (get opts "limit")))
-    :echo? (get opts "echo")
-    :skip-bluesky? (get opts "no-bluesky")
-    :skip-github? (get opts "no-github")
-    :update? (get opts "update")
-    :quiet? (get opts "quiet")))
+  (try
+    (do
+      (def opts (get parsed :opts))
+      (archive/make
+        :config-file (get opts "config")
+        :since (when (get opts "since") (parse-date (get opts "since")))
+        :ignores (get opts "ignore")
+        :limit (when (get opts "limit") (parse-limit (get opts "limit")))
+        :echo? (get opts "echo")
+        :skip-bluesky? (get opts "no-bluesky")
+        :skip-github? (get opts "no-github")
+        :update? (get opts "update")
+        :quiet? (get opts "quiet")))
+    ([e]
+     (eprint "error: " e)
+     (os/exit 1))))

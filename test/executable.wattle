@@ -1,0 +1,121 @@
+(import ../deps/gum/test :prefix "")
+
+; These tests run the executable that `wattle build exe` writes, so build it
+; first and run from the project root. Each run that loads a configuration
+; passes -B and -G, so no test calls Bluesky or GitHub or reads config.edn.
+(def- exe "zig-out/bin/blues")
+
+(unless (= :file (os/stat exe :mode))
+  (error (string "cannot find " exe " (run `wattle build exe` from the project root)")))
+
+(def- home
+  (string (or (os/getenv "TMPDIR") "/tmp") "/blues-test-home-" (os/getpid)))
+
+; Each run has an empty home directory and reads standard input from
+; /dev/null, so a run cannot wait for input when the tests run in a terminal.
+(defn- run [& args]
+  (with [null (file/open "/dev/null" :r)]
+    (def env {"HOME" home "PATH" (os/getenv "PATH")
+              :in null :out :pipe :err :pipe})
+    (def proc (os/spawn [exe |args] :pe env))
+    (def out (:read (proc :out) :all))
+    (def err (:read (proc :err) :all))
+    [(os/proc-wait proc) out err]))
+
+(deftest cli-bad-option
+  (def [exit-code out err] (run "--bad-option"))
+  (def msg
+    """
+    blues: unrecognized option '--bad-option'
+    Try 'blues --help' for more information.
+    """)
+  (is (= 1 exit-code))
+  (is (= nil out))
+  (is (== (string msg "\n") err)))
+
+(deftest cli-help
+  (def [exit-code out err] (run "--help"))
+  (def msg
+    """
+    Usage: blues [--config <path>] [--echo] [--ignore <text>] [--limit <number>] [--quiet] [--since <date>] [--update]
+
+    Archive Bluesky posts to a GitHub repository as Markdown files.
+
+    Options:
+
+     -c, --config <path>     EDN config file. (Default: config.edn)
+     -e, --echo              Print generated Markdown.
+     -i, --ignore <text>     Ignore posts containing text.
+     -l, --limit <number>    Maximum posts to fetch.
+     -q, --quiet             Suppress progress output.
+     -s, --since <date>      Fetch posts after date.
+     -u, --update            Set last-fetch to the current time.
+     -v, --version           Show version information.
+
+     -h, --help              Show this help message.
+    """)
+  (is (= 0 exit-code))
+  (is (== (string msg "\n") out))
+  (is (= nil err)))
+
+(defn- git-describe []
+  (def [ok? proc] (protect (os/spawn ["git" "describe" "--always" "--dirty"
+                                      "--abbrev=7" "--match=NONE"]
+                                     :p {:out :pipe :err :pipe})))
+  (when ok?
+    (def out (:read (proc :out) :all))
+    (:read (proc :err) :all)
+    (when (and (zero? (os/proc-wait proc)) out)
+      (string/trim out))))
+
+; The label that `wattle build exe` derives from :version in info.edn.
+(defn- expected-version []
+  (def version (get (first (parse-all (slurp "info.edn"))) :version))
+  (if (= "DEVEL" version)
+    (if-let [described (git-describe)]
+      (string "DEVEL-" described)
+      "DEVEL")
+    version))
+
+(deftest cli-version
+  (def expect (expected-version))
+  (each flag ["--version" "-v"]
+    (def [exit-code out err] (run flag))
+    (is (= 0 exit-code))
+    (is (== (string expect "\n") out))
+    (is (= nil err))))
+
+(deftest cli-offline
+  (def [exit-code out err] (run "-c" "config.example.edn" "-B" "-G"))
+  (def msg
+    """
+    Loading configuration from config.example.edn... done
+    Skipping pulling from Bluesky... skipped
+    Skipping pushing to GitHub... skipped
+    Done!
+    """)
+  (is (= 0 exit-code))
+  (is (== (string msg "\n") out))
+  (is (= nil err)))
+
+(deftest cli-offline-quiet
+  (def [exit-code out err] (run "-c" "config.example.edn" "-B" "-G" "-q"))
+  (is (= 0 exit-code))
+  (is (= nil out))
+  (is (= nil err)))
+
+(deftest cli-missing-config
+  (def [exit-code out err] (run "-c" "nonexistent.edn" "-B" "-G"))
+  (is (= 1 exit-code))
+  (is (== "Loading configuration from nonexistent.edn..." out))
+  (is (== "error: file nonexistent.edn not found\n" err)))
+
+(deftest cli-bad-limit
+  (def [exit-code out err] (run "-c" "config.example.edn" "-B" "-G" "-l" "zero"))
+  (is (= 1 exit-code))
+  (is (= nil out))
+  (is (== "error: invalid limit: zero\n" err)))
+
+(os/mkdir home)
+(defer (os/rmdir home)
+  (run-tests!))

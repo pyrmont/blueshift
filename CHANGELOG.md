@@ -3,7 +3,7 @@
 Each release lists what changed since the release before it. The changes made
 since the most recent release are under Unreleased.
 
-## Unreleased
+## 0.1.0 (2026-11-13)
 
 - Initial release. `blues` fetches a user's Bluesky posts, converts them to
   Markdown files with YAML frontmatter and uploads them to a GitHub

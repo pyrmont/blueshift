@@ -1,8 +1,8 @@
 # Releasing Blueshift
 
-Blueshift releases are prepared locally, built by GitHub Actions and then published
-from the draft GitHub release created by the release workflow. The Homebrew
-formula is updated once the release is published.
+Blueshift releases are prepared locally, built by GitHub Actions and then
+published from the draft GitHub release created by the release workflow. The
+Homebrew formula is updated once the release is published.
 
 The commands below use `0.2.0` as an example Blueshift version. Substitute the
 version required for the release being prepared.
@@ -86,8 +86,8 @@ review the draft release and publish it.
 
 ## 5. Update the Homebrew Formula
 
-After publishing the release, pass the Blueshift version without its `v` prefix to
-the Homebrew script:
+After publishing the release, pass the Blueshift version without its `v`
+prefix to the Homebrew script:
 
 ```console
 $ wattle res/tools/homebrew.wattle 0.2.0

@@ -1,8 +1,8 @@
 {:name "blueshift"
- :artifacts [{:type :lib
-              :name "blues_http"
-              :root "src/http.zig"}
-             {:type :exe
-              :name "blues"
-              :entry "lib/cli.wattle"
-              :libs ["blues_http"]}]}
+ :exes [{:type :native
+         :name "blues"
+         :entry "lib/cli.wattle"}]
+ :libs [{:type :native
+         :name "blues_http"
+         :root "src/http.zig"
+         :for ["blues"]}]}
